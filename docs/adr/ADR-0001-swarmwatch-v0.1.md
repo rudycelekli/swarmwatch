@@ -21,7 +21,7 @@ v0.1 is local-first and framework-agnostic through a generic JSONL event contrac
 1. CLI: `init`, `watch`, `serve`, `attach`, `run`, `ingest`, `import`, `demo`, `replay`, `verify`, `doctor`, `kill`, `mcp`.
 2. HTTP: `GET /api/state`, `GET /api/events`, `GET /api/verify`, `POST /api/events`, `POST /api/kill/:agentId`, `GET /api/health`.
 3. MCP: `swarm_state`, `swarm_ingest`, `swarm_kill`, `swarm_verify`.
-4. Library API: `analyzeEvents`, `startServer`, event-store helpers.
+4. Library API: `analyzeEvents`, `startServer`, event-store helpers, and `createSwarmWatchReporter` for builder instrumentation.
 
 It also ships an open trace bridge: OpenInference/OTLP-style import maps span parentage, span kind, tools, token counts, status, and cost evidence into `SwarmEvent`; OTLP JSON Lines file-exporter streams are accepted; OTLP-style export emits `resourceSpans` with `openinference.span.kind` and `swarmwatch.*` attributes for downstream observability systems while preserving imported trace/span identifiers when available.
 
@@ -51,6 +51,10 @@ Baseline named honestly: post-hoc manual trace review. v0.1 does not claim to be
 - No process-level kill of arbitrary external agents; v0.1 writes a kill marker and exposes the event so orchestrators can honor it safely. Processes launched through `swarmwatch run` are in scope for supervised termination.
 - No injection-live introspection. SwarmWatch does not hook into arbitrary framework internals or observe a silent already-running session that it did not launch and that does not emit a followable event stream.
 - No private prompt/thought scraping by default; transcript adapters redact raw payloads unless `--include-raw` / `--include-text` is explicitly used.
+
+## Builder instrumentation
+
+`createSwarmWatchReporter` is the copy-paste integration path for builders. It can append validated events to `.swarmwatch/events.jsonl` or post them to a running local dashboard/API with the mutation token. The reporter is deliberately thin: it emits the public event contract rather than introducing a second hidden telemetry format.
 
 ## Verification layer
 

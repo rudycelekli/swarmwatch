@@ -11,3 +11,4 @@ export { loadObservedEvents, loadObservedState, loadRuntimeConfig, requestKill, 
 export { followFile, lineToEvents, type FollowOptions } from './live/follow.js';
 export { runSupervised, type RunOptions } from './live/run.js';
 export type { SwarmEvent, SwarmState, AgentNode, AgentEdge, SwarmAlert, AnalyzeOptions } from './core/types.js';
+export { createSwarmWatchReporter, SwarmWatchReporter, type SwarmWatchReporterOptions, type ReporterEventInput, type ReporterEventExtras } from './sdk/reporter.js';

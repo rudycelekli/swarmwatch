@@ -10,3 +10,4 @@
 - OpenInference/OTLP-style bridge with `openinference`/`otel` import adapters and `swarmwatch export --format otel`.
 - Drift detectors for runaway cost, stuck/dead agents, circular delegation, and high fanout.
 - Verification layer with digest and structured issues.
+- SDK reporter (`createSwarmWatchReporter`) plus Node example and integration guide for file/HTTP event emission without reimplementing the event contract.

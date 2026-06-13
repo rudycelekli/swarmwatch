@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startServer, workspacePaths, initWorkspace } from '../../dist/index.js';
+import { startServer, workspacePaths, initWorkspace, createSwarmWatchReporter } from '../../dist/index.js';
 
 function headers(token, extra = {}) { return { 'content-type':'application/json', 'x-swarmwatch-token': token, ...extra }; }
 
@@ -33,6 +33,29 @@ test('HTTP endpoints ingest events, expose state/config, verify, and record kill
       res = await fetch(`http://127.0.0.1:${s.port}/api/verify`);
       const verify = await res.json();
       assert.equal(verify.ok, true);
+    } finally { await s.close(); }
+  } finally { await rm(root, { recursive:true, force:true }); }
+});
+
+
+test('SDK reporter streams into the real HTTP API and state endpoint', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'swarmwatch-http-reporter-'));
+  try {
+    await initWorkspace(root);
+    const paths = workspacePaths(root);
+    const s = await startServer({ root, eventsFile: paths.events });
+    try {
+      const reporter = createSwarmWatchReporter({ agentId:'builder', framework:'integration-test', url:`http://127.0.0.1:${s.port}`, token:s.token });
+      await reporter.started('builder online');
+      await reporter.tool('compile', { tokens: 100 });
+      await reporter.done('ship');
+      const res = await fetch(`http://127.0.0.1:${s.port}/api/state`);
+      const state = await res.json();
+      const node = state.agents.find((a) => a.id === 'builder');
+      assert.equal(node.status, 'done');
+      assert.equal(node.toolCalls, 1);
+      assert.equal(node.tokens, 100);
+      assert.match(await readFile(paths.events, 'utf8'), /integration-test/);
     } finally { await s.close(); }
   } finally { await rm(root, { recursive:true, force:true }); }
 });

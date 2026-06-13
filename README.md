@@ -52,6 +52,28 @@ npx swarmwatch import --adapter openinference --file otel-trace.json
 npx swarmwatch export --format otel > swarmwatch-otlp.json
 ```
 
+
+## Instrument your own agent in 30 seconds
+
+For builders, the fastest path is the tiny SDK reporter. It writes the same JSONL event contract the CLI, dashboard, HTTP API, MCP server, verifier, and OTLP exporter use.
+
+```js
+import { createSwarmWatchReporter } from 'swarmwatch';
+
+const swarm = createSwarmWatchReporter({
+  agentId: 'planner',
+  framework: 'my-agent-runtime'
+});
+
+await swarm.started('planning');
+await swarm.delegation('coder', 'implement the endpoint');
+await swarm.tool('edit_file', { tokens: 1200 });
+await swarm.cost(0.03, 2400);
+await swarm.done('ready for review');
+```
+
+By default this appends to `.swarmwatch/events.jsonl`, so `npx swarmwatch watch` can render it. To emit into a running dashboard instead, pass `url: 'http://127.0.0.1:8787'` and the printed `token`; the reporter posts to `POST /api/events` with `x-swarmwatch-token`. See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) and [examples/node-reporter.mjs](examples/node-reporter.mjs).
+
 ## Endpoints
 
 ### CLI
@@ -90,7 +112,7 @@ npx swarmwatch export --format otel > swarmwatch-otlp.json
 ### Library
 
 ```js
-import { analyzeEvents, startServer, makeEvent, importOtelEvents, exportOtel } from 'swarmwatch';
+import { analyzeEvents, startServer, makeEvent, createSwarmWatchReporter, importOtelEvents, exportOtel } from 'swarmwatch';
 ```
 
 ## Open trace bridge
