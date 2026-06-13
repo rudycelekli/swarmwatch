@@ -8,10 +8,12 @@ After: `npx swarmwatch attach ...` or `npx swarmwatch run ...` opens a local das
 ```mermaid
 flowchart LR
   A["Agent frameworks"] --> B["SwarmWatch event JSONL"]
+  A2["OpenInference / OTLP traces"] --> B
   B --> C["Detector engine"]
   C --> D["HTTP dashboard"]
   C --> E["CLI replay"]
   C --> F["MCP tools"]
+  C --> H["OTLP-style export"]
   D --> G["Kill request marker"]
   F --> G
 ```
@@ -44,6 +46,8 @@ Import external traces:
 npx swarmwatch import --adapter langgraph --file langgraph-events.jsonl
 npx swarmwatch import --adapter claude-transcript --file claude-session.jsonl  # redacted by default
 npx swarmwatch import --adapter claude-flow  # reads .swarm/state.json when present
+npx swarmwatch import --adapter openinference --file otel-trace.json
+npx swarmwatch export --format otel > swarmwatch-otlp.json
 ```
 
 ## Endpoints
@@ -55,7 +59,8 @@ npx swarmwatch import --adapter claude-flow  # reads .swarm/state.json when pres
 - `swarmwatch attach` — live-follow a growing `swarmwatch`/JSONL, LangGraph, Claude transcript, or claude-flow source into the dashboard.
 - `swarmwatch run` — supervise a command, stream stdout/stderr as live events, and honor kill markers by terminating the child process.
 - `swarmwatch ingest` — append one event.
-- `swarmwatch import` — convert `swarmwatch`/JSONL, LangGraph events, Claude transcript JSONL, or claude-flow state into SwarmWatch events.
+- `swarmwatch import` — convert `swarmwatch`/JSONL, LangGraph events, Claude transcript JSONL, claude-flow state, or OpenInference/OTLP-style traces into SwarmWatch events.
+- `swarmwatch export` — print SwarmWatch JSONL or OTLP-style `resourceSpans` for downstream observability tools.
 - `swarmwatch demo` — run the packaged deterministic replay from any directory.
 - `swarmwatch replay <events.jsonl>` — analyze a captured session.
 - `swarmwatch verify` — validate event integrity, print digest, and report alarms.
@@ -83,8 +88,18 @@ npx swarmwatch import --adapter claude-flow  # reads .swarm/state.json when pres
 ### Library
 
 ```js
-import { analyzeEvents, startServer, makeEvent } from 'swarmwatch';
+import { analyzeEvents, startServer, makeEvent, importOtelEvents, exportOtel } from 'swarmwatch';
 ```
+
+## Open trace bridge
+
+SwarmWatch is built to sit beside standards-based observability stacks rather than lock data inside a local dashboard.
+
+- Import: `--adapter openinference` / `--adapter otel` accepts OTLP-style JSON envelopes (`resourceSpans`) or raw span arrays and maps parent span topology, tool names, cost, tokens, and OpenInference span kinds into SwarmWatch events.
+- File-exporter streams: OTLP JSON Lines files are supported; each line may be a full OTLP traces envelope.
+- Export: `swarmwatch export --format otel` emits OTLP-style `resourceSpans` with `openinference.span.kind` and `swarmwatch.*` attributes.
+- Positioning: use SwarmWatch for local live control and structural swarm safety; forward/export traces to LangSmith, Langfuse, Phoenix, AgentOps, Helicone, Honeycomb, Grafana, or any OTLP pipeline for long-retention analytics.
+- Boundary: SwarmWatch is not an OTLP network collector and does not push traces over the network. The bridge covers trace/span topology, OpenInference span kind, tool, cost, token, status, and SwarmWatch evidence fields; model output text requires `--include-text`, and richer vendor-specific span payloads require `--include-raw`.
 
 ## Event format
 
@@ -99,7 +114,7 @@ Useful fields: `parentId`, `targetAgentId`, `framework`, `message`, `tool`, `cos
 
 ## Import privacy
 
-Transcript imports are redacted by default. `claude-transcript` and `langgraph` adapters preserve topology/timing and event type, but they do **not** store raw prompt/message payloads unless you explicitly pass `--include-raw` and do **not** store message text unless you pass `--include-text`. Use those flags only for traces you are comfortable keeping in `.swarmwatch/events.jsonl`.
+Transcript imports are redacted by default. `claude-transcript` and `langgraph` adapters preserve topology/timing and event type, but they do **not** store raw prompt/message payloads unless you explicitly pass `--include-raw` and do **not** store message text unless you pass `--include-text`. OpenInference/OTLP imports preserve trace/span IDs, span names, selected operational attributes, and explicit `swarmwatch.message` attributes by default; generic model output text requires `--include-text`, and the full raw span requires `--include-raw`. Use raw/text flags only for traces you are comfortable keeping in `.swarmwatch/events.jsonl`.
 
 ## Alarms
 
@@ -121,6 +136,10 @@ SwarmWatch is not a hosted trace warehouse. It is local live visibility for agen
 ## Live vs replay semantics
 
 Structural alerts (`runaway_cost`, `circular_delegation`, `high_fanout`) work in both live and replay modes. Clock-relative alerts (`stuck_agent`, `dead_agent`) only run in live mode, because a finished transcript cannot honestly prove that an agent is stuck right now. `demo`, `replay`, `verify`, and `bench` use replay mode; the dashboard/API served by `watch`, `attach`, and `run` use live mode.
+
+## Differentiation
+
+See [docs/DIFFERENTIATION.md](docs/DIFFERENTIATION.md). Short version: SwarmWatch is not trying to be a smaller hosted trace warehouse. It is the local live operator-control layer: attach/run, structural graph alarms, token-protected local actions, replay honesty, privacy-default imports, and OpenInference/OTLP import/export from one package.
 
 ## Benchmark
 

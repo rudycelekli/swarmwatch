@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { makeEvent, parseJsonl } from '../core/event.js';
 import { readClaudeFlowState } from './claudeFlow.js';
+import { importOtelEvents } from './otel.js';
 import type { SwarmEvent } from '../core/types.js';
 
-export type ImportAdapter = 'swarmwatch' | 'jsonl' | 'claude-flow' | 'claude-transcript' | 'langgraph';
+export type ImportAdapter = 'swarmwatch' | 'jsonl' | 'claude-flow' | 'claude-transcript' | 'langgraph' | 'openinference' | 'otel';
 export interface ImportOptions { adapter: ImportAdapter; file?: string; root?: string; includeRaw?: boolean; includeText?: boolean }
 
 function lines(text: string): unknown[] {
@@ -23,12 +24,24 @@ export async function importEvents(opts: ImportOptions): Promise<SwarmEvent[]> {
   if (!opts.file) throw new Error(`${opts.adapter} import requires --file`);
   const text = await readFile(opts.file, 'utf8');
   if (opts.adapter === 'swarmwatch' || opts.adapter === 'jsonl') return parseJsonl(text);
+  if (opts.adapter === 'openinference' || opts.adapter === 'otel') {
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); }
+    catch { parsed = lines(text); }
+    return importOtelEvents(parsed, opts.file, opts.includeRaw, opts.includeText);
+  }
   return importEventObjects(opts.adapter, lines(text), opts.file, opts);
 }
 
 export function importEventObjects(adapter: ImportAdapter, raw: unknown[], source: string, opts: ImportOptions = { adapter }): SwarmEvent[] {
   if (adapter === 'langgraph') return raw.flatMap((item, i) => langGraphEvent(item, i, source, opts));
   if (adapter === 'claude-transcript') return raw.flatMap((item, i) => claudeTranscriptEvent(item, i, source, opts));
+  if (adapter === 'openinference' || adapter === 'otel') {
+    if (raw.length === 1 && raw[0] && typeof raw[0] === 'object' && ('resourceSpans' in raw[0] || 'spans' in raw[0])) {
+      return importOtelEvents(raw[0], source, opts.includeRaw, opts.includeText);
+    }
+    return importOtelEvents(raw, source, opts.includeRaw, opts.includeText);
+  }
   throw new Error(`unknown adapter ${adapter}`);
 }
 

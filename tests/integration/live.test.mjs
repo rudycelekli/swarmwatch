@@ -23,8 +23,10 @@ test('CLI attach follows an actively appended event file', async () => {
   const source = join(root, 'source.jsonl');
   await writeFile(source, '');
   const proc = spawn(process.execPath, ['dist/cli/index.js', 'attach', '--root', root, '--no-dashboard', '--adapter', 'swarmwatch', '--file', source, '--poll-ms', '50', '--duration', '700'], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '';
+  proc.stdout.on('data', (chunk) => { stdout += chunk; });
   try {
-    await new Promise((r) => setTimeout(r, 120));
+    await waitFor(async () => stdout.includes('SwarmWatch attach: following'));
     await appendFile(source, JSON.stringify({ id:'live-1', ts:'2026-06-13T00:00:00.000Z', type:'agent_started', agentId:'live-agent' }) + '\n');
     const code = await new Promise((resolve) => proc.on('close', resolve));
     assert.equal(code, 0);

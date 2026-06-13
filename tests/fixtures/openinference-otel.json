@@ -1,0 +1,39 @@
+{
+  "resourceSpans": [
+    {
+      "resource": { "attributes": [{ "key": "service.name", "value": { "stringValue": "agent-demo" } }] },
+      "scopeSpans": [
+        {
+          "scope": { "name": "openinference-demo" },
+          "spans": [
+            {
+              "traceId": "11111111111111111111111111111111",
+              "spanId": "aaaaaaaaaaaaaaaa",
+              "name": "planner",
+              "startTimeUnixNano": "1781352000000000000",
+              "attributes": [
+                { "key": "openinference.span.kind", "value": { "stringValue": "AGENT" } },
+                { "key": "swarmwatch.agent.id", "value": { "stringValue": "planner" } },
+                { "key": "swarmwatch.message", "value": { "stringValue": "plan" } }
+              ]
+            },
+            {
+              "traceId": "11111111111111111111111111111111",
+              "spanId": "bbbbbbbbbbbbbbbb",
+              "parentSpanId": "aaaaaaaaaaaaaaaa",
+              "name": "tool:get_repo",
+              "startTimeUnixNano": "1781352001000000000",
+              "attributes": [
+                { "key": "openinference.span.kind", "value": { "stringValue": "TOOL" } },
+                { "key": "swarmwatch.agent.id", "value": { "stringValue": "coder" } },
+                { "key": "tool.name", "value": { "stringValue": "get_repo" } },
+                { "key": "swarmwatch.cost_usd", "value": { "doubleValue": 1.25 } },
+                { "key": "swarmwatch.tokens", "value": { "intValue": 1000 } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

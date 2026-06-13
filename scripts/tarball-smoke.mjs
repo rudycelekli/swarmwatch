@@ -7,13 +7,21 @@ import { promisify } from 'node:util';
 const exec = promisify(execFile);
 const root = new URL('..', import.meta.url).pathname;
 const tmp = await mkdtemp(join(tmpdir(), 'swarmwatch-smoke-'));
+function childEnv() {
+  const env = { ...process.env };
+  // `npm publish --dry-run` sets npm_config_dry_run for lifecycle scripts.
+  // This smoke test intentionally creates a real local tarball to install.
+  delete env.npm_config_dry_run;
+  delete env.npm_config_dryRun;
+  return env;
+}
 try {
-  const { stdout: packOut } = await exec('npm', ['pack', '--json'], { cwd: root });
+  const { stdout: packOut } = await exec('npm', ['pack', '--json'], { cwd: root, env: childEnv() });
   const packed = JSON.parse(packOut)[0].filename;
   const tarball = join(root, packed);
   try {
-    await exec('npm', ['init', '-y'], { cwd: tmp });
-    await exec('npm', ['install', tarball], { cwd: tmp });
+    await exec('npm', ['init', '-y'], { cwd: tmp, env: childEnv() });
+    await exec('npm', ['install', tarball], { cwd: tmp, env: childEnv() });
     const bin = join(tmp, 'node_modules', '.bin', 'swarmwatch');
     await exec(bin, ['init'], { cwd: tmp });
     await exec(bin, ['ingest', '--type', 'agent_started', '--agent', 'planner'], { cwd: tmp });

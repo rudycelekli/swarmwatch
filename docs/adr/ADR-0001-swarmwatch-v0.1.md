@@ -16,12 +16,14 @@ SwarmWatch gives local, real-time visibility into multi-agent swarms when attach
 
 ## Scope
 
-v0.1 is local-first and framework-agnostic through a generic JSONL event contract, live-follow adapters for growing trace sources, process supervision for command-based agents, plus import adapters for LangGraph event streams, Claude transcript JSONL, and best-effort claude-flow state. It ships four front doors:
+v0.1 is local-first and framework-agnostic through a generic JSONL event contract, live-follow adapters for growing trace sources, process supervision for command-based agents, plus import adapters for LangGraph event streams, Claude transcript JSONL, OpenInference/OTLP-style traces, and best-effort claude-flow state. It ships four front doors:
 
 1. CLI: `init`, `watch`, `serve`, `attach`, `run`, `ingest`, `import`, `demo`, `replay`, `verify`, `doctor`, `kill`, `mcp`.
 2. HTTP: `GET /api/state`, `GET /api/events`, `GET /api/verify`, `POST /api/events`, `POST /api/kill/:agentId`, `GET /api/health`.
 3. MCP: `swarm_state`, `swarm_ingest`, `swarm_kill`, `swarm_verify`.
 4. Library API: `analyzeEvents`, `startServer`, event-store helpers.
+
+It also ships an open trace bridge: OpenInference/OTLP-style import maps span parentage, span kind, tools, token counts, status, and cost evidence into `SwarmEvent`; OTLP JSON Lines file-exporter streams are accepted; OTLP-style export emits `resourceSpans` with `openinference.span.kind` and `swarmwatch.*` attributes for downstream observability systems while preserving imported trace/span identifiers when available.
 
 ## Event contract
 
@@ -46,7 +48,7 @@ Baseline named honestly: post-hoc manual trace review. v0.1 does not claim to be
 ## Non-goals
 
 - No remote SaaS.
-- No process-level kill of arbitrary agents yet; v0.1 writes a kill marker and exposes the event so orchestrators can honor it safely.
+- No process-level kill of arbitrary external agents; v0.1 writes a kill marker and exposes the event so orchestrators can honor it safely. Processes launched through `swarmwatch run` are in scope for supervised termination.
 - No private prompt/thought scraping by default; transcript adapters redact raw payloads unless `--include-raw` / `--include-text` is explicitly used.
 
 ## Verification layer

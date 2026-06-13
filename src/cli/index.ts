@@ -4,13 +4,14 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyzeEvents } from '../core/analyze.js';
 import { makeEvent, parseJsonl } from '../core/event.js';
-import { appendEvent, initWorkspace } from '../core/store.js';
+import { appendEvent, initWorkspace, workspacePaths } from '../core/store.js';
 import { startServer } from '../server/server.js';
 import { runMcp } from '../mcp/server.js';
 import { loadObservedEvents, loadObservedState, loadRuntimeConfig, requestKill, verifyObserved } from '../core/runtime.js';
 import { followFile } from '../live/follow.js';
 import { runSupervised } from '../live/run.js';
 import { importEvents, type ImportAdapter } from '../adapters/importers.js';
+import { exportOtel } from '../adapters/otel.js';
 import type { SwarmEvent } from '../core/types.js';
 
 function help() {
@@ -24,6 +25,7 @@ Usage:
   swarmwatch run --agent ID [--no-dashboard] -- <command...>
   swarmwatch ingest --type TYPE --agent ID [--target ID] [--parent ID] [--cost USD] [--tokens N] [--message TEXT]
   swarmwatch import --adapter ADAPTER [--file FILE] [--dry-run] [--include-raw] [--include-text]
+  swarmwatch export --format swarmwatch|otel [--events FILE]
   swarmwatch demo [--json]
   swarmwatch replay <events.jsonl> [--json]
   swarmwatch verify [--events FILE] [--json]
@@ -38,6 +40,8 @@ Examples:
   npx swarmwatch demo
   npx swarmwatch attach --adapter swarmwatch --file live-events.jsonl
   npx swarmwatch run --agent demo -- node agent.js
+  npx swarmwatch import --adapter openinference --file otel-trace.json
+  npx swarmwatch export --format otel
   npx swarmwatch import --adapter claude-transcript --file transcript.jsonl
   npx swarmwatch verify
   npx swarmwatch watch --port 8787
@@ -88,7 +92,9 @@ async function main() {
       console.log(`SwarmWatch dashboard: http://127.0.0.1:${server.port}`);
       console.log(`Mutation token: ${server.token}`);
     }
+    const source = arg('--file') ?? (adapter === 'claude-flow' ? '.swarm/state.json' : '(missing source)');
     const follower = await followFile({ adapter, file: arg('--file'), root, outFile: eventsFile, fromStart: flag('--from-start'), includeRaw: flag('--include-raw'), includeText: flag('--include-text'), pollMs: arg('--poll-ms') ? Number(arg('--poll-ms')) : undefined });
+    console.log(`SwarmWatch attach: following ${source} with ${adapter} adapter`);
     const duration = arg('--duration') ? Number(arg('--duration')) : undefined;
     if (duration !== undefined) {
       await new Promise((resolve) => setTimeout(resolve, duration));
@@ -138,6 +144,15 @@ async function main() {
     const imported = await importEvents({ adapter, file: arg('--file'), root, includeRaw: flag('--include-raw'), includeText: flag('--include-text') });
     if (!flag('--dry-run')) for (const ev of imported) await appendEvent(paths.events, ev);
     console.log(JSON.stringify({ ok: true, adapter, imported: imported.length, dryRun: flag('--dry-run') }, null, 2));
+    return;
+  }
+  if (cmd === 'export') {
+    const eventsFile = resolve(arg('--events') ?? workspacePaths(root).events);
+    const events = await loadObservedEvents(root, eventsFile, false);
+    const format = arg('--format', 'swarmwatch');
+    if (format === 'otel' || format === 'openinference') console.log(JSON.stringify(exportOtel(events), null, 2));
+    else if (format === 'swarmwatch' || format === 'jsonl') for (const ev of events) console.log(JSON.stringify(ev));
+    else throw new Error(`unknown export format ${format}`);
     return;
   }
   if (cmd === 'verify') {

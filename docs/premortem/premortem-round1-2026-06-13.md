@@ -19,6 +19,9 @@ Prompt: Six months from now SwarmWatch failed despite launching. Why?
 5. **Failure: Launch claim sounds like LangSmith/AgentOps replacement.**
    - Fix now: position as local live mission control, not post-hoc hosted trace analytics.
 
+6. **Failure: Standards-based teams refuse a bespoke local event island.**
+   - Fix now: add OpenInference/OTLP-style import and export so SwarmWatch can serve as the live control layer beside existing observability pipelines.
+
 ## Exit condition
 
 The first implementation must include endpoint tests, a replay fixture, and documentation that makes the kill limitation structural rather than hidden in an FAQ.
@@ -29,3 +32,4 @@ The first implementation must include endpoint tests, a replay fixture, and docu
 - Renamed public wording from kill switch to kill-request marker to avoid overclaiming process termination.
 - Added import adapters for LangGraph, Claude transcript JSONL, generic JSONL, and claude-flow state so the core is not locked to one framework.
 - Added endpoint tests for CLI, HTTP, and MCP plus a tarball smoke test that installs the packed npm artifact in a clean temp project.
+- Added OpenInference/OTLP bridge tests and differentiation docs so the product boundary is explicit: local operator control, not hosted trace warehousing.
