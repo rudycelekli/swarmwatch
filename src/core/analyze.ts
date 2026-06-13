@@ -36,6 +36,7 @@ export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: Ana
   const stuckMs = opts.stuckMs ?? 5 * 60_000;
   const deadMs = opts.deadMs ?? 15 * 60_000;
   const fanoutLimit = opts.fanoutLimit ?? 6;
+  const liveMode = opts.mode !== 'replay';
   const agents = new Map<string, AgentNode>();
   const edges = new Map<string, AgentEdge>();
   const sorted = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
@@ -77,8 +78,8 @@ export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: Ana
   for (const a of agentList) {
     if (a.costUsd > costLimitUsd) alerts.push({ id: alertId('runaway_cost', [a.id, a.costUsd]), kind: 'runaway_cost', severity: 'critical', agentId: a.id, message: `${a.id} spent $${a.costUsd.toFixed(4)} over $${costLimitUsd}`, evidence: { costUsd: a.costUsd, limit: costLimitUsd }, ts: now.toISOString() });
     const age = now.getTime() - Date.parse(a.lastSeen);
-    if (a.status === 'running' && age > deadMs) alerts.push({ id: alertId('dead_agent', [a.id, a.lastSeen]), kind: 'dead_agent', severity: 'critical', agentId: a.id, message: `${a.id} has no events for ${Math.round(age/1000)}s`, evidence: { lastSeen: a.lastSeen, deadMs }, ts: now.toISOString() });
-    else if (a.status === 'running' && age > stuckMs && a.messageCount === 0 && a.toolCalls === 0) alerts.push({ id: alertId('stuck_agent', [a.id, a.lastSeen]), kind: 'stuck_agent', severity: 'warn', agentId: a.id, message: `${a.id} started but has produced no messages/tools for ${Math.round(age/1000)}s`, evidence: { lastSeen: a.lastSeen, stuckMs }, ts: now.toISOString() });
+    if (liveMode && a.status === 'running' && age > deadMs) alerts.push({ id: alertId('dead_agent', [a.id, a.lastSeen]), kind: 'dead_agent', severity: 'critical', agentId: a.id, message: `${a.id} has no events for ${Math.round(age/1000)}s`, evidence: { lastSeen: a.lastSeen, deadMs }, ts: now.toISOString() });
+    else if (liveMode && a.status === 'running' && age > stuckMs && a.messageCount === 0 && a.toolCalls === 0) alerts.push({ id: alertId('stuck_agent', [a.id, a.lastSeen]), kind: 'stuck_agent', severity: 'warn', agentId: a.id, message: `${a.id} started but has produced no messages/tools for ${Math.round(age/1000)}s`, evidence: { lastSeen: a.lastSeen, stuckMs }, ts: now.toISOString() });
   }
   const fanout = new Map<string, number>();
   for (const e of edgeList.filter((x) => x.kind === 'delegation')) fanout.set(e.from, (fanout.get(e.from) ?? 0) + 1);

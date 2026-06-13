@@ -74,4 +74,6 @@ export interface AnalyzeOptions {
   stuckMs?: number;
   deadMs?: number;
   fanoutLimit?: number;
+  mode?: 'live' | 'replay';
 }
+

@@ -25,9 +25,9 @@ export async function loadObservedState(root: string, eventsFile: string): Promi
 export async function verifyObserved(root: string, eventsFile: string): Promise<VerifyResult> {
   const cfg = await loadRuntimeConfig(root);
   try {
-    return verifyEvents(await loadObservedEvents(root, eventsFile), eventsFile, cfg);
+    return verifyEvents(await loadObservedEvents(root, eventsFile), eventsFile, { ...cfg, mode: 'replay' });
   } catch (err) {
-    return verifyEvents([], eventsFile, cfg, [{
+    return verifyEvents([], eventsFile, { ...cfg, mode: 'replay' }, [{
       severity: 'error',
       code: 'event_log_parse_failed',
       message: (err as Error).message,

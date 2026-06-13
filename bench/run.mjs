@@ -17,7 +17,7 @@ const latencies = [];
 let state;
 for (let i = 0; i < iterations; i++) {
   const started = performance.now();
-  state = analyzeEvents(events, 'examples/seed-session.jsonl', { costLimitUsd: 1, now: new Date('2026-06-13T00:00:10.000Z') });
+  state = analyzeEvents(events, 'examples/seed-session.jsonl', { costLimitUsd: 1, now: new Date('2026-06-13T00:00:10.000Z'), mode: 'replay' });
   latencies.push(performance.now() - started);
 }
 const actualAlerts = [...new Set(state.alerts.map((a) => a.kind))].sort();

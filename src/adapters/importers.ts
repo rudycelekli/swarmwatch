@@ -23,10 +23,13 @@ export async function importEvents(opts: ImportOptions): Promise<SwarmEvent[]> {
   if (!opts.file) throw new Error(`${opts.adapter} import requires --file`);
   const text = await readFile(opts.file, 'utf8');
   if (opts.adapter === 'swarmwatch' || opts.adapter === 'jsonl') return parseJsonl(text);
-  const raw = lines(text);
-  if (opts.adapter === 'langgraph') return raw.flatMap((item, i) => langGraphEvent(item, i, opts.file!, opts));
-  if (opts.adapter === 'claude-transcript') return raw.flatMap((item, i) => claudeTranscriptEvent(item, i, opts.file!, opts));
-  throw new Error(`unknown adapter ${opts.adapter}`);
+  return importEventObjects(opts.adapter, lines(text), opts.file, opts);
+}
+
+export function importEventObjects(adapter: ImportAdapter, raw: unknown[], source: string, opts: ImportOptions = { adapter }): SwarmEvent[] {
+  if (adapter === 'langgraph') return raw.flatMap((item, i) => langGraphEvent(item, i, source, opts));
+  if (adapter === 'claude-transcript') return raw.flatMap((item, i) => claudeTranscriptEvent(item, i, source, opts));
+  throw new Error(`unknown adapter ${adapter}`);
 }
 
 function langGraphEvent(item: unknown, i: number, file: string, opts: ImportOptions): SwarmEvent[] {

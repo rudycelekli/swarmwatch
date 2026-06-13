@@ -5,7 +5,7 @@ Status: Accepted
 
 ## One claim
 
-SwarmWatch gives local, real-time visibility into multi-agent swarms: topology, cost, stuck-agent alarms, circular-delegation alarms, and operator kill markers from one command: `npx swarmwatch`.
+SwarmWatch gives local, real-time visibility into multi-agent swarms when attached to a growing source or supervising a process: topology, cost, live stuck/dead alarms, structural graph alarms, and kill markers from one command.
 
 ## Impact interrogation
 
@@ -16,9 +16,9 @@ SwarmWatch gives local, real-time visibility into multi-agent swarms: topology, 
 
 ## Scope
 
-v0.1 is local-first and framework-agnostic through a generic JSONL event contract plus import adapters for LangGraph event streams, Claude transcript JSONL, and best-effort claude-flow state. It ships four front doors:
+v0.1 is local-first and framework-agnostic through a generic JSONL event contract, live-follow adapters for growing trace sources, process supervision for command-based agents, plus import adapters for LangGraph event streams, Claude transcript JSONL, and best-effort claude-flow state. It ships four front doors:
 
-1. CLI: `init`, `watch`, `serve`, `ingest`, `import`, `demo`, `replay`, `verify`, `doctor`, `kill`, `mcp`.
+1. CLI: `init`, `watch`, `serve`, `attach`, `run`, `ingest`, `import`, `demo`, `replay`, `verify`, `doctor`, `kill`, `mcp`.
 2. HTTP: `GET /api/state`, `GET /api/events`, `GET /api/verify`, `POST /api/events`, `POST /api/kill/:agentId`, `GET /api/health`.
 3. MCP: `swarm_state`, `swarm_ingest`, `swarm_kill`, `swarm_verify`.
 4. Library API: `analyzeEvents`, `startServer`, event-store helpers.
@@ -56,3 +56,9 @@ Baseline named honestly: post-hoc manual trace review. v0.1 does not claim to be
 ## Security posture
 
 The HTTP server binds to `127.0.0.1`. Mutating HTTP endpoints reject cross-origin requests and require the per-server `x-swarmwatch-token`; the dashboard embeds the token for same-origin button actions. The dashboard renders event-controlled strings with DOM `textContent`, not HTML injection.
+
+## Live layer
+
+`swarmwatch attach` tails a growing source and appends converted events into `.swarmwatch/events.jsonl` while the dashboard polls `/api/state`. `swarmwatch run --agent ID -- <command>` supervises a child process, emits start/message/done/error events live, and watches `.swarmwatch/kills.jsonl`; a matching kill marker terminates the supervised child and emits a killed event.
+
+Clock-relative `stuck_agent` and `dead_agent` alerts are gated to live mode. Replay/demo/verify/bench use replay mode so old transcripts do not produce misleading current-time alarms.

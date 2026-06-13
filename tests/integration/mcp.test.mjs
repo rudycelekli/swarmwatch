@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -19,6 +20,16 @@ function readLine(proc) {
   });
 }
 
+
+async function waitFor(predicate, timeoutMs = 3000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (await predicate()) return;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  throw new Error('timed out waiting for condition');
+}
+
 function call(proc, id, name, args = {}) {
   proc.stdin.write(JSON.stringify({ jsonrpc:'2.0', id, method:'tools/call', params:{ name, arguments: args } }) + '\n');
   return readLine(proc);
@@ -30,7 +41,7 @@ test('MCP tools list, ingest, state, verify, and kill work over stdio with confi
   const proc = spawn(process.execPath, ['dist/cli/index.js', 'mcp', '--root', root], { cwd: new URL('../..', import.meta.url).pathname, stdio: ['pipe', 'pipe', 'pipe'] });
   try {
     // mcp startup initializes config; now tighten it.
-    await new Promise((r) => setTimeout(r, 50));
+    await waitFor(() => existsSync(join(root, '.swarmwatch', 'config.json')));
     await writeFile(join(root, '.swarmwatch', 'config.json'), JSON.stringify({ costLimitUsd: 0.5, stuckMs: 300000, deadMs: 900000, fanoutLimit: 6 }));
     proc.stdin.write(JSON.stringify({ jsonrpc:'2.0', id:1, method:'initialize', params:{} }) + '\n');
     assert.equal((await readLine(proc)).result.serverInfo.name, 'swarmwatch');
