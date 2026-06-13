@@ -26,3 +26,4 @@ jobs:
       - run: npm run test:integration
       - run: npm run bench -- --check
       - run: npm run smoke:tarball
+      - run: npm run quality

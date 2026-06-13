@@ -47,7 +47,8 @@
     "bench": "node bench/run.mjs",
     "smoke:tarball": "node scripts/tarball-smoke.mjs",
     "prepack": "npm run build",
-    "bench:check": "node bench/run.mjs --check"
+    "bench:check": "node bench/run.mjs --check",
+    "quality": "node scripts/quality-gate.mjs"
   },
   "keywords": [
     "agents",
