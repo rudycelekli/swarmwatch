@@ -6,17 +6,44 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+const mcpReaders = new WeakMap();
+function readerFor(proc) {
+  let reader = mcpReaders.get(proc);
+  if (reader) return reader;
+  reader = { buf: '', lines: [], waiters: [] };
+  const drain = () => {
+    while (reader.waiters.length && reader.lines.length) reader.waiters.shift().resolve(reader.lines.shift());
+  };
+  proc.stdout.on('data', (chunk) => {
+    reader.buf += chunk.toString('utf8');
+    for (;;) {
+      const i = reader.buf.indexOf('\n');
+      if (i < 0) break;
+      const line = reader.buf.slice(0, i);
+      reader.buf = reader.buf.slice(i + 1);
+      if (!line.trim()) continue;
+      reader.lines.push(JSON.parse(line));
+    }
+    drain();
+  });
+  proc.once('error', (err) => {
+    for (const waiter of reader.waiters.splice(0)) waiter.reject(err);
+  });
+  mcpReaders.set(proc, reader);
+  return reader;
+}
+
 function readLine(proc) {
+  const reader = readerFor(proc);
   return new Promise((resolve, reject) => {
-    let buf = '';
-    const onData = (chunk) => {
-      buf += chunk.toString('utf8');
-      const i = buf.indexOf('\n');
-      if (i >= 0) { proc.stdout.off('data', onData); resolve(JSON.parse(buf.slice(0, i))); }
-    };
-    proc.stdout.on('data', onData);
-    proc.once('error', reject);
-    setTimeout(() => reject(new Error('timed out waiting for MCP line')), 2000).unref();
+    if (reader.lines.length) return resolve(reader.lines.shift());
+    const waiter = { resolve, reject };
+    reader.waiters.push(waiter);
+    setTimeout(() => {
+      const idx = reader.waiters.indexOf(waiter);
+      if (idx >= 0) reader.waiters.splice(idx, 1);
+      reject(new Error('timed out waiting for MCP line'));
+    }, 2000).unref();
   });
 }
 

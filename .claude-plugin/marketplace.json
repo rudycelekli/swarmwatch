@@ -1,0 +1,23 @@
+{
+  "name": "swarmwatch-marketplace",
+  "owner": {
+    "name": "rudycelekli",
+    "url": "https://github.com/rudycelekli"
+  },
+  "plugins": [
+    {
+      "name": "swarmwatch",
+      "description": "Local-first SwarmWatch controls for process-live runs, stream-live follows, and quiet structural swarm alarms.",
+      "version": "0.1.0",
+      "author": {
+        "name": "rudycelekli",
+        "url": "https://github.com/rudycelekli"
+      },
+      "source": "./plugins/swarmwatch",
+      "category": "development"
+    }
+  ],
+  "metadata": {
+    "description": "Claude Code plugin marketplace for SwarmWatch local-first multi-agent mission control."
+  }
+}

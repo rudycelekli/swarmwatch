@@ -1,0 +1,27 @@
+{
+  "name": "swarmwatch",
+  "version": "0.1.0",
+  "description": "Claude Code controls for SwarmWatch: process-live run, stream-live attach, scoped kill requests, onboarding detection, and quiet structural alarms.",
+  "author": {
+    "name": "rudycelekli",
+    "url": "https://github.com/rudycelekli"
+  },
+  "homepage": "https://github.com/rudycelekli/swarmwatch#readme",
+  "repository": "https://github.com/rudycelekli/swarmwatch",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "swarm",
+    "observability",
+    "claude-code",
+    "opentelemetry",
+    "openinference"
+  ],
+  "skills": "./skills/",
+  "commands": [
+    "./commands/swarmwatch-init.md",
+    "./commands/swarmwatch-run.md",
+    "./commands/swarmwatch-attach.md",
+    "./commands/swarmwatch-kill.md"
+  ]
+}

@@ -4,6 +4,27 @@ Date: 2026-06-13
 
 SwarmWatch is easiest to adopt when agent builders do not have to learn a second telemetry system. The integration contract is deliberately small: emit `SwarmEvent` JSONL, or use the SDK reporter that emits the same contract for you.
 
+
+## Claude Code plugin path
+
+Install the plugin marketplace from Claude Code:
+
+```text
+/plugin marketplace add rudycelekli/swarmwatch
+/plugin install swarmwatch
+/reload-plugins
+/swarmwatch:swarmwatch-init
+```
+
+The plugin contributes namespaced commands:
+
+- `/swarmwatch:swarmwatch-init` — detects a launchable agent command or followable event source, writes `.swarmwatch/config.json`, and scaffolds `.swarmwatch/swarmwatch-start.sh`.
+- `/swarmwatch:swarmwatch-run` — process-live wrapper around `npx swarmwatch run`.
+- `/swarmwatch:swarmwatch-attach` — stream-live wrapper around `npx swarmwatch attach`.
+- `/swarmwatch:swarmwatch-kill` — honest kill request: supervised child termination for process-live, marker-only for stream-live/external sources.
+
+The plugin monitor is intentionally quiet: it emits only new structural alerts (`runaway_cost`, `circular_delegation`, `high_fanout`) during an active SwarmWatch session and frequency-caps each distinct alert.
+
 ## Option 1: SDK reporter, file mode
 
 Use this when your agent process can write to the workspace filesystem.

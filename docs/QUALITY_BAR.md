@@ -15,10 +15,11 @@ A release is blocked unless all of these are true:
 7. **Open trace bridge** — OpenInference/OTLP-style import and export must preserve topology, tool, cost, and token evidence so SwarmWatch can sit beside standards-based observability stacks.
 8. **Adversarial test budget** — `npm run quality` must observe at least 400 passing tests before release.
 9. **Builder adoption path** — a tested SDK reporter must let any Node-based agent emit file or HTTP events without reimplementing the event contract.
-10. **Pack/install reality** — tarball smoke must install the packed artifact into a clean temp project and run the installed binary.
-11. **Benchmark provenance** — benchmark check must include dataset hash, expected/actual alerts, false positives/negatives, baseline metadata, and latency budget.
-12. **Publish guard** — `prepublishOnly` must run the full quality gate; npm dry-run must expose the exact publishable file manifest.
-13. **Enterprise security hygiene** — a security policy must document reporting, local HTTP posture, mutation tokens, raw trace handling, and kill-scope limits.
-14. **No dirty release** — release commits must be clean, tagged, pushed, and backed by CI.
+10. **Plugin distribution path** — Claude Code marketplace/plugin manifests, commands, monitor config, and onboarding detection must validate and have fixture tests.
+11. **Pack/install reality** — tarball smoke must install the packed artifact into a clean temp project and run the installed binary.
+12. **Benchmark provenance** — benchmark check must include dataset hash, expected/actual alerts, false positives/negatives, baseline metadata, and latency budget.
+13. **Publish guard** — `prepublishOnly` must run the full quality gate; npm dry-run must expose the exact publishable file manifest.
+14. **Enterprise security hygiene** — a security policy must document reporting, local HTTP posture, mutation tokens, raw trace handling, and kill-scope limits.
+15. **No dirty release** — release commits must be clean, tagged, pushed, and backed by CI.
 
 This is the floor, not the ceiling.

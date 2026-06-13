@@ -37,7 +37,9 @@
     "docs",
     "bench/run.mjs",
     "CHANGELOG.md",
-    "CONTRIBUTING.md"
+    "CONTRIBUTING.md",
+    ".claude-plugin",
+    "plugins"
   ],
   "scripts": {
     "build": "tsc",

@@ -1,0 +1,7 @@
+[
+  {
+    "name": "swarmwatch-structural-alarms",
+    "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/swarmwatch-alarm-monitor.mjs\" --project \"${CLAUDE_PROJECT_DIR}\" --state \"${CLAUDE_PLUGIN_DATA}/alarm-state.json\"",
+    "description": "Quiet SwarmWatch structural alarm monitor; emits only new runaway_cost, circular_delegation, or high_fanout alerts."
+  }
+]

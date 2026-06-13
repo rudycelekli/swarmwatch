@@ -52,6 +52,10 @@ Baseline named honestly: post-hoc manual trace review. v0.1 does not claim to be
 - No injection-live introspection. SwarmWatch does not hook into arbitrary framework internals or observe a silent already-running session that it did not launch and that does not emit a followable event stream.
 - No private prompt/thought scraping by default; transcript adapters redact raw payloads unless `--include-raw` / `--include-text` is explicitly used.
 
+## Claude Code plugin distribution
+
+SwarmWatch ships a Claude Code plugin marketplace entry and plugin manifest. Installed commands are namespaced as `/swarmwatch:swarmwatch-init`, `/swarmwatch:swarmwatch-run`, `/swarmwatch:swarmwatch-attach`, and `/swarmwatch:swarmwatch-kill`. The plugin adds an ambient `swarmwatch-alarm` skill plus monitor that stays silent until an active SwarmWatch session has a new structural alert. It reports `runaway_cost`, `circular_delegation`, and `high_fanout`; it does not report replay-mode `stuck_agent` or `dead_agent`.
+
 ## Builder instrumentation
 
 `createSwarmWatchReporter` is the copy-paste integration path for builders. It can append validated events to `.swarmwatch/events.jsonl` or post them to a running local dashboard/API with the mutation token. The reporter is deliberately thin: it emits the public event contract rather than introducing a second hidden telemetry format.

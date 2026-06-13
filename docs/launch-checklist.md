@@ -19,6 +19,8 @@ npm run bench -- --check
 npm run smoke:tarball
 npm pack --dry-run
 npm publish --dry-run
+claude plugin validate .
+claude plugin validate ./plugins/swarmwatch
 ```
 
 Required observed outcomes:
@@ -28,6 +30,7 @@ Required observed outcomes:
 - Benchmark check validates report schema, expected/actual alerts, dataset hash, false positives/negatives, latency budget, and baseline metadata without dirtying the worktree.
 - OpenInference/OTLP bridge tests cover import topology/tool/cost/token mapping and OTLP-style export.
 - SDK reporter tests cover default JSONL emission, invalid-event rejection, HTTP token posting, HTTP rejection surfacing, and end-to-end ingestion through the real HTTP API/state endpoint.
+- Claude Code plugin validation passes for the marketplace and plugin; plugin tests cover command wrappers, onboarding detection, and quiet structural alarm frequency-capping.
 - CI workflow exists at `.github/workflows/ci.yml` for Node 20/22 on Ubuntu/macOS/Windows.
 - Tarball smoke packs the package, installs it into a clean temp project, runs the installed `swarmwatch` binary, and verifies `demo` works without repo-local paths.
 - Generated benchmark reports are not packed; `bench/run.mjs` computes fresh provenance at runtime to avoid stale `gitSha` claims in the npm artifact.
@@ -40,4 +43,4 @@ Required observed outcomes:
 
 ## Observed local gate
 
-On 2026-06-13, the hardened gate passed locally with Node v22.19.0 on Darwin arm64: `npm run quality` observed 442 passing tests (minimum 400), benchmark check passed, tarball smoke passed, `npm pack --dry-run` passed, and `npm publish --dry-run --json` produced a publishable tarball manifest.
+On 2026-06-13, the hardened gate passed locally with Node v22.19.0 on Darwin arm64: `npm run quality` observed 456 passing tests (minimum 400), Claude Code plugin validation passed for the marketplace and plugin, benchmark check passed, tarball smoke passed, `npm pack --dry-run` passed, and `npm publish --dry-run --json` produced a publishable tarball manifest.

@@ -11,3 +11,4 @@
 - Drift detectors for runaway cost, stuck/dead agents, circular delegation, and high fanout.
 - Verification layer with digest and structured issues.
 - SDK reporter (`createSwarmWatchReporter`) plus Node example and integration guide for file/HTTP event emission without reimplementing the event contract.
+- Claude Code plugin marketplace/package with namespaced commands, onboarding detection, and quiet `swarmwatch-alarm` structural monitor.

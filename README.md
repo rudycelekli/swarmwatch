@@ -53,6 +53,20 @@ npx swarmwatch export --format otel > swarmwatch-otlp.json
 ```
 
 
+
+## Claude Code plugin install
+
+SwarmWatch can be installed as a Claude Code plugin marketplace:
+
+```text
+/plugin marketplace add rudycelekli/swarmwatch
+/plugin install swarmwatch
+/reload-plugins
+/swarmwatch:swarmwatch-init
+```
+
+Claude Code namespaces plugin commands, so the installed commands are `/swarmwatch:swarmwatch-init`, `/swarmwatch:swarmwatch-run`, `/swarmwatch:swarmwatch-attach`, and `/swarmwatch:swarmwatch-kill`. The plugin also ships `swarmwatch-alarm`, an ambient structural-alarm skill backed by a quiet monitor. It stays silent unless an active process-live or stream-live session produces a new `runaway_cost`, `circular_delegation`, or `high_fanout` alert. It does not claim injection-live introspection and does not surface replay-mode `stuck_agent` / `dead_agent` alarms.
+
 ## Instrument your own agent in 30 seconds
 
 For builders, the fastest path is the tiny SDK reporter. It writes the same JSONL event contract the CLI, dashboard, HTTP API, MCP server, verifier, and OTLP exporter use.

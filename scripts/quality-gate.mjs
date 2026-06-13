@@ -28,6 +28,8 @@ const match = combined.match(/# tests (\d+)/);
 if (!match) throw new Error('could not find node:test count in TAP output');
 const count = Number(match[1]);
 if (count < MIN_TESTS) throw new Error(`quality gate requires >=${MIN_TESTS} tests, observed ${count}`);
+run('claude', ['plugin', 'validate', '.']);
+run('claude', ['plugin', 'validate', './plugins/swarmwatch']);
 run('npm', ['run', 'bench:check']);
 run('npm', ['run', 'smoke:tarball']);
 run('npm', ['pack', '--dry-run']);
