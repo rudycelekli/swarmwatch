@@ -47,8 +47,12 @@ Baseline named honestly: post-hoc manual trace review. v0.1 does not claim to be
 
 - No remote SaaS.
 - No process-level kill of arbitrary agents yet; v0.1 writes a kill marker and exposes the event so orchestrators can honor it safely.
-- No private prompt/thought scraping; event ingestion is explicit.
+- No private prompt/thought scraping by default; transcript adapters redact raw payloads unless `--include-raw` / `--include-text` is explicitly used.
 
 ## Verification layer
 
 `swarmwatch verify` and `GET /api/verify` parse the event log, validate duplicate IDs/timestamps/negative counters, compute a sha256 digest, run detectors, and return structured issues. Exit codes: 0 = valid/no critical alarms, 1 = valid with critical alarms, 2 = invalid/precondition.
+
+## Security posture
+
+The HTTP server binds to `127.0.0.1`. Mutating HTTP endpoints reject cross-origin requests and require the per-server `x-swarmwatch-token`; the dashboard embeds the token for same-origin button actions. The dashboard renders event-controlled strings with DOM `textContent`, not HTML injection.

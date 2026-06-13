@@ -46,7 +46,8 @@
     "test:integration": "node --test \"tests/integration/**/*.test.mjs\"",
     "bench": "node bench/run.mjs",
     "smoke:tarball": "node scripts/tarball-smoke.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "bench:check": "node bench/run.mjs --check"
   },
   "keywords": [
     "agents",

@@ -6,4 +6,5 @@ export { readClaudeFlowState } from './adapters/claudeFlow.js';
 export { importEvents, type ImportAdapter } from './adapters/importers.js';
 export { verifyEvents, digestEvents, type VerifyResult, type VerifyIssue } from './core/verify.js';
 export { loadConfig, parseConfig, DEFAULT_CONFIG, type SwarmWatchConfig } from './core/config.js';
+export { loadObservedEvents, loadObservedState, loadRuntimeConfig, requestKill, verifyObserved } from './core/runtime.js';
 export type { SwarmEvent, SwarmState, AgentNode, AgentEdge, SwarmAlert, AnalyzeOptions } from './core/types.js';

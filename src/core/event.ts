@@ -23,9 +23,15 @@ export function assertEvent(value: unknown): SwarmEvent {
   for (const key of ['id', 'ts', 'type', 'agentId']) {
     if (typeof e[key] !== 'string' || e[key] === '') throw new Error(`event.${key} must be a non-empty string`);
   }
+  if (!Number.isFinite(Date.parse(String(e.ts)))) throw new Error('event.ts must be a valid ISO timestamp');
   if (!EVENT_TYPES.has(e.type as SwarmEventType)) throw new Error(`event.type must be one of ${[...EVENT_TYPES].join(', ')}`);
-  if (e.costUsd !== undefined && typeof e.costUsd !== 'number') throw new Error('event.costUsd must be a number');
-  if (e.tokens !== undefined && typeof e.tokens !== 'number') throw new Error('event.tokens must be a number');
+  for (const key of ['parentId', 'targetAgentId', 'framework', 'message', 'tool', 'status']) {
+    if (e[key] !== undefined && typeof e[key] !== 'string') throw new Error(`event.${key} must be a string`);
+  }
+  const costUsd = e.costUsd;
+  const tokens = e.tokens;
+  if (costUsd !== undefined && (typeof costUsd !== 'number' || !Number.isFinite(costUsd) || costUsd < 0)) throw new Error('event.costUsd must be a finite non-negative number');
+  if (tokens !== undefined && (typeof tokens !== 'number' || !Number.isFinite(tokens) || tokens < 0)) throw new Error('event.tokens must be a finite non-negative number');
   return e as unknown as SwarmEvent;
 }
 

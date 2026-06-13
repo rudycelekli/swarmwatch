@@ -58,9 +58,9 @@ export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: Ana
     node.framework = e.framework ?? node.framework;
     node.lastSeen = e.ts > node.lastSeen ? e.ts : node.lastSeen;
     if (e.type === 'agent_started' || e.type === 'agent_heartbeat' || e.type === 'agent_message' || e.type === 'tool_call' || e.type === 'delegation') node.status = 'running';
-    if (e.type === 'agent_done') node.status = 'done';
-    if (e.type === 'agent_error') node.status = 'error';
-    if (e.type === 'kill_requested') node.status = 'killed';
+    if (e.status === 'done' || e.type === 'agent_done') node.status = 'done';
+    if (e.status === 'error' || e.type === 'agent_error') node.status = 'error';
+    if (e.status === 'killed' || e.type === 'kill_requested') node.status = 'killed';
     if (e.type === 'agent_message') node.messageCount += 1;
     if (e.type === 'tool_call') node.toolCalls += 1;
     node.costUsd += e.costUsd ?? 0;

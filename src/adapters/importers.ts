@@ -5,6 +5,7 @@ import { readClaudeFlowState } from './claudeFlow.js';
 import type { SwarmEvent } from '../core/types.js';
 
 export type ImportAdapter = 'swarmwatch' | 'jsonl' | 'claude-flow' | 'claude-transcript' | 'langgraph';
+export interface ImportOptions { adapter: ImportAdapter; file?: string; root?: string; includeRaw?: boolean; includeText?: boolean }
 
 function lines(text: string): unknown[] {
   const trimmed = text.trim();
@@ -13,29 +14,34 @@ function lines(text: string): unknown[] {
   return trimmed.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 }
 
-export async function importEvents(opts: { adapter: ImportAdapter; file?: string; root?: string }): Promise<SwarmEvent[]> {
+function metadata(source: string, raw: Record<string, unknown>, includeRaw?: boolean): Record<string, unknown> {
+  return includeRaw ? { source, raw } : { source };
+}
+
+export async function importEvents(opts: ImportOptions): Promise<SwarmEvent[]> {
   if (opts.adapter === 'claude-flow') return readClaudeFlowState(opts.root ?? process.cwd());
   if (!opts.file) throw new Error(`${opts.adapter} import requires --file`);
   const text = await readFile(opts.file, 'utf8');
   if (opts.adapter === 'swarmwatch' || opts.adapter === 'jsonl') return parseJsonl(text);
   const raw = lines(text);
-  if (opts.adapter === 'langgraph') return raw.flatMap((item, i) => langGraphEvent(item, i, opts.file!));
-  if (opts.adapter === 'claude-transcript') return raw.flatMap((item, i) => claudeTranscriptEvent(item, i, opts.file!));
+  if (opts.adapter === 'langgraph') return raw.flatMap((item, i) => langGraphEvent(item, i, opts.file!, opts));
+  if (opts.adapter === 'claude-transcript') return raw.flatMap((item, i) => claudeTranscriptEvent(item, i, opts.file!, opts));
   throw new Error(`unknown adapter ${opts.adapter}`);
 }
 
-function langGraphEvent(item: unknown, i: number, file: string): SwarmEvent[] {
+function langGraphEvent(item: unknown, i: number, file: string, opts: ImportOptions): SwarmEvent[] {
   if (!item || typeof item !== 'object') return [];
   const r = item as Record<string, unknown>;
   const event = String(r.event ?? r.type ?? '');
   const name = String(r.name ?? r.node ?? r.run_id ?? `node-${i}`);
   const ts = String(r.ts ?? r.time ?? r.timestamp ?? new Date(0 + i).toISOString());
-  if (event.includes('start')) return [makeEvent({ id: `langgraph-${basename(file)}-${i}`, ts, type: 'agent_started', agentId: name, framework: 'langgraph', metadata: { raw: r } })];
-  if (event.includes('end') || event.includes('done')) return [makeEvent({ id: `langgraph-${basename(file)}-${i}`, ts, type: 'agent_done', agentId: name, framework: 'langgraph', status: 'done', metadata: { raw: r } })];
-  return [makeEvent({ id: `langgraph-${basename(file)}-${i}`, ts, type: 'agent_message', agentId: name, framework: 'langgraph', message: typeof r.data === 'string' ? r.data : event, metadata: { raw: r } })];
+  const base = { id: `langgraph-${basename(file)}-${i}`, ts, agentId: name, framework: 'langgraph', metadata: metadata('langgraph', r, opts.includeRaw) } as const;
+  if (event.includes('start')) return [makeEvent({ ...base, type: 'agent_started' })];
+  if (event.includes('end') || event.includes('done')) return [makeEvent({ ...base, type: 'agent_done', status: 'done' })];
+  return [makeEvent({ ...base, type: 'agent_message', message: opts.includeText && typeof r.data === 'string' ? r.data : event })];
 }
 
-function claudeTranscriptEvent(item: unknown, i: number, file: string): SwarmEvent[] {
+function claudeTranscriptEvent(item: unknown, i: number, file: string, opts: ImportOptions): SwarmEvent[] {
   if (!item || typeof item !== 'object') return [];
   const r = item as Record<string, unknown>;
   const msg = (r.message && typeof r.message === 'object') ? r.message as Record<string, unknown> : undefined;
@@ -46,6 +52,8 @@ function claudeTranscriptEvent(item: unknown, i: number, file: string): SwarmEve
   const type = String(r.type ?? msg?.type ?? 'message');
   const content = Array.isArray(msg?.content) ? msg?.content : Array.isArray(r.content) ? r.content : [];
   const text = content.map((c) => (c && typeof c === 'object' && 'text' in c) ? String((c as Record<string, unknown>).text) : '').filter(Boolean).join('\n').slice(0, 500);
-  if (type === 'result') return [makeEvent({ id: `claude-${basename(file)}-${i}`, ts, type: 'agent_done', agentId, framework: 'claude-code', status: 'done', message: String(r.subtype ?? 'result'), metadata: { raw: r } })];
-  return [makeEvent({ id: `claude-${basename(file)}-${i}`, ts, type: type.includes('tool') ? 'tool_call' : 'agent_message', agentId, framework: 'claude-code', message: text || type, metadata: { raw: r } })];
+  const safeMessage = opts.includeText ? (text || type) : type;
+  const base = { id: `claude-${basename(file)}-${i}`, ts, agentId, framework: 'claude-code', metadata: metadata('claude-transcript', r, opts.includeRaw) } as const;
+  if (type === 'result') return [makeEvent({ ...base, type: 'agent_done', status: 'done', message: opts.includeText ? String(r.subtype ?? 'result') : 'result' })];
+  return [makeEvent({ ...base, type: type.includes('tool') ? 'tool_call' : 'agent_message', message: safeMessage })];
 }

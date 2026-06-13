@@ -1,0 +1,44 @@
+import { analyzeEvents } from './analyze.js';
+import { loadConfig, type SwarmWatchConfig } from './config.js';
+import { makeEvent } from './event.js';
+import { appendEvent, appendKill, initWorkspace, readEvents, workspacePaths } from './store.js';
+import { verifyEvents, type VerifyResult } from './verify.js';
+import { readClaudeFlowState } from '../adapters/claudeFlow.js';
+import type { SwarmEvent, SwarmState } from './types.js';
+
+export async function loadObservedEvents(root: string, eventsFile: string, includeClaudeFlow = true): Promise<SwarmEvent[]> {
+  const base = await readEvents(eventsFile);
+  if (!includeClaudeFlow) return base;
+  const cf = await readClaudeFlowState(root).catch(() => []);
+  return [...base, ...cf];
+}
+
+export async function loadRuntimeConfig(root: string): Promise<SwarmWatchConfig> {
+  return loadConfig(workspacePaths(root).config);
+}
+
+export async function loadObservedState(root: string, eventsFile: string): Promise<SwarmState> {
+  const cfg = await loadRuntimeConfig(root);
+  return analyzeEvents(await loadObservedEvents(root, eventsFile), eventsFile, cfg);
+}
+
+export async function verifyObserved(root: string, eventsFile: string): Promise<VerifyResult> {
+  const cfg = await loadRuntimeConfig(root);
+  try {
+    return verifyEvents(await loadObservedEvents(root, eventsFile), eventsFile, cfg);
+  } catch (err) {
+    return verifyEvents([], eventsFile, cfg, [{
+      severity: 'error',
+      code: 'event_log_parse_failed',
+      message: (err as Error).message,
+    }]);
+  }
+}
+
+export async function requestKill(root: string, eventsFile: string, agentId: string, reason = 'operator-request'): Promise<SwarmEvent> {
+  await initWorkspace(root);
+  const event = makeEvent({ type: 'kill_requested', agentId, status: 'killed', message: reason, framework: 'swarmwatch' });
+  await appendEvent(eventsFile, event);
+  await appendKill(root, agentId, reason);
+  return event;
+}

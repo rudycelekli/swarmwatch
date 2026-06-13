@@ -16,13 +16,17 @@ export const DEFAULT_CONFIG: SwarmWatchConfig = {
   fanoutLimit: 6,
 };
 
+function nonNegative(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback;
+}
+
 export function parseConfig(value: unknown): SwarmWatchConfig {
   const v = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   return {
-    costLimitUsd: typeof v.costLimitUsd === 'number' && Number.isFinite(v.costLimitUsd) ? v.costLimitUsd : DEFAULT_CONFIG.costLimitUsd,
-    stuckMs: typeof v.stuckMs === 'number' && Number.isFinite(v.stuckMs) ? v.stuckMs : DEFAULT_CONFIG.stuckMs,
-    deadMs: typeof v.deadMs === 'number' && Number.isFinite(v.deadMs) ? v.deadMs : DEFAULT_CONFIG.deadMs,
-    fanoutLimit: typeof v.fanoutLimit === 'number' && Number.isFinite(v.fanoutLimit) ? v.fanoutLimit : DEFAULT_CONFIG.fanoutLimit,
+    costLimitUsd: nonNegative(v.costLimitUsd, DEFAULT_CONFIG.costLimitUsd),
+    stuckMs: nonNegative(v.stuckMs, DEFAULT_CONFIG.stuckMs),
+    deadMs: nonNegative(v.deadMs, DEFAULT_CONFIG.deadMs),
+    fanoutLimit: nonNegative(v.fanoutLimit, DEFAULT_CONFIG.fanoutLimit),
   };
 }
 

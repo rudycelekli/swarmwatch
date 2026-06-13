@@ -3,7 +3,7 @@
 SwarmWatch is a local mission-control screen for multi-agent runs. If you have a planner spawning coders, reviewers, testers, and tool workers, SwarmWatch shows the live topology, per-agent cost, stuck-agent alarms, circular-delegation alarms, and an operator kill-request marker from one local command.
 
 Before: eight background agents, eight terminals, and no idea which one is looping.  
-After: `npx swarmwatch` opens a local dashboard and `/api/state` tells you exactly what is running and what looks wrong.
+After: `npx swarmwatch` opens a local dashboard and `/api/state` tells you what SwarmWatch has observed and what looks wrong.
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,7 @@ Import external traces:
 
 ```bash
 npx swarmwatch import --adapter langgraph --file langgraph-events.jsonl
-npx swarmwatch import --adapter claude-transcript --file claude-session.jsonl
+npx swarmwatch import --adapter claude-transcript --file claude-session.jsonl  # redacted by default
 npx swarmwatch import --adapter claude-flow  # reads .swarm/state.json when present
 ```
 
@@ -58,9 +58,10 @@ npx swarmwatch import --adapter claude-flow  # reads .swarm/state.json when pres
 - `GET /api/health`
 - `GET /api/state`
 - `GET /api/events`
+- `GET /api/config`
 - `GET /api/verify`
-- `POST /api/events`
-- `POST /api/kill/:agentId`
+- `POST /api/events` — requires local `x-swarmwatch-token` from server startup/dashboard
+- `POST /api/kill/:agentId` — requires local `x-swarmwatch-token` from server startup/dashboard
 
 ### MCP tools
 
@@ -83,7 +84,12 @@ import { analyzeEvents, startServer, makeEvent } from 'swarmwatch';
 {"id":"1","ts":"2026-06-13T00:00:00.000Z","type":"agent_started","agentId":"planner"}
 ```
 
-Useful fields: `parentId`, `targetAgentId`, `framework`, `message`, `tool`, `costUsd`, `tokens`, `status`, `metadata`.
+Useful fields: `parentId`, `targetAgentId`, `framework`, `message`, `tool`, `costUsd`, `tokens`, `status`, `metadata`. Numeric fields must be finite and non-negative; invalid events are rejected before they can corrupt the log.
+
+
+## Import privacy
+
+Transcript imports are redacted by default. `claude-transcript` and `langgraph` adapters preserve topology/timing and event type, but they do **not** store raw prompt/message payloads unless you explicitly pass `--include-raw` and do **not** store message text unless you pass `--include-text`. Use those flags only for traces you are comfortable keeping in `.swarmwatch/events.jsonl`.
 
 ## Alarms
 
@@ -103,11 +109,11 @@ SwarmWatch is not a hosted trace warehouse. It is local live visibility for agen
 
 ## Benchmark
 
-`npm run bench` replays `examples/seed-session.jsonl`, which contains a circular delegation and a cost spike. The benchmark claim is narrow and reproducible: SwarmWatch detects those seeded failures in one local analysis pass. It is a harness benchmark, not a claim about every real agent framework.
+`npm run bench -- --check` replays `examples/seed-session.jsonl`, which contains a circular delegation and a cost spike. The benchmark claim is narrow and reproducible: SwarmWatch detects those seeded failures in one local analysis pass. It is a harness benchmark, not a claim about every real agent framework.
 
 ```bash
 npm run build
-npm run bench
+npm run bench -- --check
 ```
 
 ## Development
@@ -117,6 +123,7 @@ npm install
 npm run build
 npm test
 npm run test:integration
+npm run bench -- --check
 npm run smoke:tarball
 ```
 

@@ -23,8 +23,8 @@ export function digestEvents(events: SwarmEvent[]): string {
   return h.digest('hex');
 }
 
-export function verifyEvents(events: SwarmEvent[], source = 'memory', opts: AnalyzeOptions = {}): VerifyResult {
-  const issues: VerifyIssue[] = [];
+export function verifyEvents(events: SwarmEvent[], source = 'memory', opts: AnalyzeOptions = {}, initialIssues: VerifyIssue[] = []): VerifyResult {
+  const issues: VerifyIssue[] = [...initialIssues];
   const ids = new Set<string>();
   let previousTs = '';
   for (const e of events) {
@@ -37,8 +37,8 @@ export function verifyEvents(events: SwarmEvent[], source = 'memory', opts: Anal
     if ((e.type === 'delegation' || e.type === 'agent_message') && e.targetAgentId && e.targetAgentId === e.agentId) {
       issues.push({ severity: 'warn', code: 'self_edge', message: `event ${e.id} targets its own agent`, eventId: e.id });
     }
-    if (e.costUsd !== undefined && e.costUsd < 0) issues.push({ severity: 'error', code: 'negative_cost', message: `event ${e.id} has negative cost`, eventId: e.id });
-    if (e.tokens !== undefined && e.tokens < 0) issues.push({ severity: 'error', code: 'negative_tokens', message: `event ${e.id} has negative tokens`, eventId: e.id });
+    if (e.costUsd !== undefined && (!Number.isFinite(e.costUsd) || e.costUsd < 0)) issues.push({ severity: 'error', code: 'invalid_cost', message: `event ${e.id} has invalid cost`, eventId: e.id });
+    if (e.tokens !== undefined && (!Number.isFinite(e.tokens) || e.tokens < 0)) issues.push({ severity: 'error', code: 'invalid_tokens', message: `event ${e.id} has invalid tokens`, eventId: e.id });
   }
   const state = analyzeEvents(events, source, opts);
   for (const a of state.alerts.filter((x) => x.severity === 'critical')) {
