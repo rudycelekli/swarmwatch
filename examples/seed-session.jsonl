@@ -1,0 +1,6 @@
+{"id":"1","ts":"2026-06-13T00:00:00.000Z","type":"agent_started","agentId":"planner","framework":"claude-code"}
+{"id":"2","ts":"2026-06-13T00:00:01.000Z","type":"delegation","agentId":"planner","targetAgentId":"coder","framework":"claude-code","message":"implement dashboard"}
+{"id":"3","ts":"2026-06-13T00:00:02.000Z","type":"agent_started","agentId":"coder","parentId":"planner","framework":"claude-code"}
+{"id":"4","ts":"2026-06-13T00:00:03.000Z","type":"delegation","agentId":"coder","targetAgentId":"reviewer","framework":"claude-code"}
+{"id":"5","ts":"2026-06-13T00:00:04.000Z","type":"delegation","agentId":"reviewer","targetAgentId":"planner","framework":"claude-code"}
+{"id":"6","ts":"2026-06-13T00:00:05.000Z","type":"cost","agentId":"coder","framework":"claude-code","costUsd":1.4,"tokens":50000}

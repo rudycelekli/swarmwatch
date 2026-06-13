@@ -1,0 +1,12 @@
+{
+  "claim": "seeded circular delegation and runaway cost are detected from replayed swarm events",
+  "baseline": "post-hoc manual trace review",
+  "dataset": "examples/seed-session.jsonl",
+  "metric": "detection latency in analysis pass",
+  "elapsedMs": 8.446207999999999,
+  "alerts": [
+    "runaway_cost",
+    "circular_delegation"
+  ],
+  "pass": true
+}

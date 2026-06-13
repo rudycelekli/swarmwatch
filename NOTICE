@@ -1,0 +1,3 @@
+SwarmWatch is a clean-room implementation by rudycelekli.
+
+Conceptual lineage: TraceVault-style local session traces, mincut-governance-style swarm drift alarms, ruflo/claude-flow swarm state concepts, and the broader local-first agent observability ecosystem. No third-party source code is copied.

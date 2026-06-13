@@ -1,0 +1,61 @@
+{
+  "name": "swarmwatch",
+  "version": "0.1.0",
+  "description": "Local-first mission control for multi-agent swarms: live topology, cost meters, drift alarms, and kill switches.",
+  "type": "module",
+  "license": "MIT",
+  "author": "rudycelekli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rudycelekli/swarmwatch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rudycelekli/swarmwatch/issues"
+  },
+  "homepage": "https://github.com/rudycelekli/swarmwatch#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "swarmwatch": "dist/cli/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "examples"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
+    "test": "node --test \"tests/unit/**/*.test.mjs\"",
+    "test:integration": "node --test \"tests/integration/**/*.test.mjs\"",
+    "bench": "node bench/run.mjs",
+    "smoke:tarball": "node scripts/tarball-smoke.mjs",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "agents",
+    "multi-agent",
+    "observability",
+    "dashboard",
+    "claude-flow",
+    "langgraph",
+    "mcp",
+    "local-first"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}
