@@ -7,6 +7,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 const DEFAULT_CONFIG = { costLimitUsd: 5, stuckMs: 300000, deadMs: 900000, fanoutLimit: 6 };
 const SESSION_FILE = 'claude-plugin-session.json';
 const START_SCRIPT = 'swarmwatch-start.sh';
+const GITHUB_PACKAGE = 'github:rudycelekli/swarmwatch';
 
 function arg(args, name, fallback) {
   const i = args.indexOf(name);
@@ -51,7 +52,7 @@ function swarmwatchCommand(root) {
     ? spawnSync('where', ['swarmwatch'], { encoding: 'utf8' })
     : spawnSync('sh', ['-lc', 'command -v swarmwatch >/dev/null 2>&1'], { encoding: 'utf8' });
   if (global.status === 0) return { command: 'swarmwatch', prefix: [] };
-  return { command: 'npx', prefix: ['-y', 'swarmwatch'] };
+  return { command: 'npx', prefix: ['-y', GITHUB_PACKAGE] };
 }
 function runSwarmWatch(root, cliArgs) {
   const bin = swarmwatchCommand(root);
@@ -159,15 +160,16 @@ function detect(root, args) {
   return { mode: 'none', reason: 'no launch command or followable event stream detected' };
 }
 function commandForDetection(detection, root, agentId) {
+  const cli = ['npx', '-y', GITHUB_PACKAGE];
   if (detection.mode === 'process-live') {
     const cmd = detection.runCommand || ['node', 'agent.js'];
-    return ['npx', 'swarmwatch', 'run', '--agent', agentId, '--', ...cmd];
+    return [...cli, 'run', '--agent', agentId, '--', ...cmd];
   }
   if (detection.mode === 'stream-live') {
-    if (detection.adapter === 'claude-flow') return ['npx', 'swarmwatch', 'attach', '--adapter', 'claude-flow'];
-    return ['npx', 'swarmwatch', 'attach', '--adapter', detection.adapter, '--file', detection.file];
+    if (detection.adapter === 'claude-flow') return [...cli, 'attach', '--adapter', 'claude-flow'];
+    return [...cli, 'attach', '--adapter', detection.adapter, '--file', detection.file];
   }
-  return ['npx', 'swarmwatch', 'watch'];
+  return [...cli, 'watch'];
 }
 async function writeStartScript(file, command) {
   const body = `#!/usr/bin/env bash\nset -euo pipefail\n${command.map(shellQuote).join(' ')} "$@"\n`;

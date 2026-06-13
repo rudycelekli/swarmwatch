@@ -185,7 +185,7 @@ test('swarmwatch-init detects launchable agent command as process-live run', asy
     const result = JSON.parse(stdout);
     assert.equal(result.mode, 'process-live');
     assert.deepEqual(result.runCommand, ['npm', 'run', 'agent']);
-    assert.match(result.suggestedCommand, /swarmwatch run --agent builder -- npm run agent/);
+    assert.match(result.suggestedCommand, /npx -y github:rudycelekli\/swarmwatch run --agent builder -- npm run agent/);
     assert.ok(existsSync(join(root, '.swarmwatch/swarmwatch-start.sh')));
   } finally { await rm(root, { recursive:true, force:true }); }
 });
