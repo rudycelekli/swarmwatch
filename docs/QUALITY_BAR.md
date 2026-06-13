@@ -7,7 +7,7 @@ SwarmWatch is not allowed to be a clever demo. The target quality is: a tool Cod
 A release is blocked unless all of these are true:
 
 1. **Truthful pitch** — README claims must be backed by executable tests, benchmark output, or explicitly marked roadmap.
-2. **Live loop works** — live attach, supervised run, dashboard updates, and kill-marker termination have integration tests.
+2. **Live loop works** — stream-live attach, process-live supervised run, dashboard updates, and kill-marker termination have integration tests.
 3. **No log corruption** — invalid CLI/HTTP/MCP input is rejected before append; malformed logs return structured verify output.
 4. **Replay is not fake live** — clock-relative alerts are live-only; replay/demo/bench do not invent stuck/dead agents.
 5. **Security by default** — dashboard renders untrusted event text as text, HTTP mutations require local token, transcript imports redact by default.

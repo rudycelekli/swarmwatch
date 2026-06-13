@@ -1,9 +1,11 @@
 # SwarmWatch
 
-SwarmWatch is a local mission-control screen for multi-agent runs. It can attach to a growing event stream or supervise a running process, render live topology/cost/alarms, and turn the red KILL button into an actual termination request for processes launched through `swarmwatch run`.
+SwarmWatch is a local mission-control screen for multi-agent runs. It has two live mechanisms: **process-live** mode (`swarmwatch run`) launches and supervises an agent command under SwarmWatch, and **stream-live** mode (`swarmwatch attach`) follows a framework or agent event stream that is being written while the run is happening. It renders live topology/cost/alarms and turns the red KILL button into an actual termination request for processes launched through `swarmwatch run`.
+
+SwarmWatch does **not** do injection-live introspection: it does not hook into arbitrary framework internals or observe already-running sessions that SwarmWatch did not launch and that do not emit a followable event stream.
 
 Before: eight background agents, eight terminals, and no idea which one is looping.  
-After: `npx swarmwatch attach ...` or `npx swarmwatch run ...` opens a local dashboard that updates while events arrive and `/api/state` tells you what SwarmWatch has observed and what looks wrong.
+After: launch agents under `npx swarmwatch run ...`, or follow any framework that emits a growing event stream with `npx swarmwatch attach ...`; the local dashboard updates while events arrive and `/api/state` tells you what SwarmWatch has observed and what looks wrong.
 
 ```mermaid
 flowchart LR
@@ -23,10 +25,10 @@ flowchart LR
 ```bash
 npx swarmwatch demo      # packaged replay: shows circular delegation + cost alarm
 
-# Live mode 1: follow a growing event stream
+# Stream-live mode: follow a growing event stream emitted by a framework/agent
 npx swarmwatch attach --adapter swarmwatch --file live-events.jsonl
 
-# Live mode 2: supervise a process and stream stdout/stderr into the dashboard
+# Process-live mode: launch/supervise a process and stream stdout/stderr into the dashboard
 npx swarmwatch run --agent worker -- node agent.js
 
 # Manual/event-file mode
@@ -56,7 +58,7 @@ npx swarmwatch export --format otel > swarmwatch-otlp.json
 
 - `swarmwatch init` — create `.swarmwatch/events.jsonl` and config.
 - `swarmwatch watch` / `swarmwatch serve` — local dashboard + API over `.swarmwatch/events.jsonl`.
-- `swarmwatch attach` — live-follow a growing `swarmwatch`/JSONL, LangGraph, Claude transcript, or claude-flow source into the dashboard.
+- `swarmwatch attach` — stream-live follow of a growing `swarmwatch`/JSONL, LangGraph, Claude transcript, or claude-flow source into the dashboard; it tails a file/source and does not introspect arbitrary already-running processes.
 - `swarmwatch run` — supervise a command, stream stdout/stderr as live events, and honor kill markers by terminating the child process.
 - `swarmwatch ingest` — append one event.
 - `swarmwatch import` — convert `swarmwatch`/JSONL, LangGraph events, Claude transcript JSONL, claude-flow state, or OpenInference/OTLP-style traces into SwarmWatch events.
@@ -130,16 +132,18 @@ Every alert includes evidence fields. The detector engine is deterministic for a
 
 The red KILL button is a **kill-request marker** for imported/external sources. For processes launched through `swarmwatch run`, SwarmWatch also closes the loop and terminates the supervised child when a kill marker for that agent appears. It does not forcibly terminate arbitrary external processes it did not launch.
 
+The live mechanisms are explicit: **process-live** means SwarmWatch launched the command, and **stream-live** means SwarmWatch is following a source that emits events as the run progresses. SwarmWatch is not an injection-live debugger and does not attach to a silent, already-running framework session by magic.
+
 SwarmWatch is not a hosted trace warehouse. It is local live visibility for agent operators who need to see topology and drift while a run is happening.
 
 
 ## Live vs replay semantics
 
-Structural alerts (`runaway_cost`, `circular_delegation`, `high_fanout`) work in both live and replay modes. Clock-relative alerts (`stuck_agent`, `dead_agent`) only run in live mode, because a finished transcript cannot honestly prove that an agent is stuck right now. `demo`, `replay`, `verify`, and `bench` use replay mode; the dashboard/API served by `watch`, `attach`, and `run` use live mode.
+Structural alerts (`runaway_cost`, `circular_delegation`, `high_fanout`) work in both live and replay modes. Clock-relative alerts (`stuck_agent`, `dead_agent`) only run in live mode, because a finished transcript cannot honestly prove that an agent is stuck right now. `demo`, `replay`, `verify`, and `bench` use replay mode and do not emit `stuck_agent`/`dead_agent` from artificial wall-clock age; the dashboard/API served by `watch`, `attach`, and `run` use live mode with a real clock.
 
 ## Differentiation
 
-See [docs/DIFFERENTIATION.md](docs/DIFFERENTIATION.md). Short version: SwarmWatch is not trying to be a smaller hosted trace warehouse. It is the local live operator-control layer: attach/run, structural graph alarms, token-protected local actions, replay honesty, privacy-default imports, and OpenInference/OTLP import/export from one package.
+See [docs/DIFFERENTIATION.md](docs/DIFFERENTIATION.md). Short version: SwarmWatch is not trying to be a smaller hosted trace warehouse. It is the local live operator-control layer: launch agents under SwarmWatch, follow frameworks that emit event streams, surface structural graph alarms, expose token-protected local actions, keep replay honest, default imports to privacy, and bridge OpenInference/OTLP from one package.
 
 ## Benchmark
 

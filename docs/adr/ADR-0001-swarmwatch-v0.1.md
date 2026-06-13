@@ -5,7 +5,7 @@ Status: Accepted
 
 ## One claim
 
-SwarmWatch gives local, real-time visibility into multi-agent swarms when attached to a growing source or supervising a process: topology, cost, live stuck/dead alarms, structural graph alarms, and kill markers from one command.
+SwarmWatch gives local, real-time visibility into multi-agent swarms through two explicit mechanisms: process-live supervision for commands launched under `swarmwatch run`, and stream-live following for growing event sources read by `swarmwatch attach`. It surfaces topology, cost, live stuck/dead alarms, structural graph alarms, and kill markers from one command.
 
 ## Impact interrogation
 
@@ -16,7 +16,7 @@ SwarmWatch gives local, real-time visibility into multi-agent swarms when attach
 
 ## Scope
 
-v0.1 is local-first and framework-agnostic through a generic JSONL event contract, live-follow adapters for growing trace sources, process supervision for command-based agents, plus import adapters for LangGraph event streams, Claude transcript JSONL, OpenInference/OTLP-style traces, and best-effort claude-flow state. It ships four front doors:
+v0.1 is local-first and framework-agnostic through a generic JSONL event contract, stream-live adapters for growing trace sources, process-live supervision for command-based agents, plus import adapters for LangGraph event streams, Claude transcript JSONL, OpenInference/OTLP-style traces, and best-effort claude-flow state. It ships four front doors:
 
 1. CLI: `init`, `watch`, `serve`, `attach`, `run`, `ingest`, `import`, `demo`, `replay`, `verify`, `doctor`, `kill`, `mcp`.
 2. HTTP: `GET /api/state`, `GET /api/events`, `GET /api/verify`, `POST /api/events`, `POST /api/kill/:agentId`, `GET /api/health`.
@@ -49,6 +49,7 @@ Baseline named honestly: post-hoc manual trace review. v0.1 does not claim to be
 
 - No remote SaaS.
 - No process-level kill of arbitrary external agents; v0.1 writes a kill marker and exposes the event so orchestrators can honor it safely. Processes launched through `swarmwatch run` are in scope for supervised termination.
+- No injection-live introspection. SwarmWatch does not hook into arbitrary framework internals or observe a silent already-running session that it did not launch and that does not emit a followable event stream.
 - No private prompt/thought scraping by default; transcript adapters redact raw payloads unless `--include-raw` / `--include-text` is explicitly used.
 
 ## Verification layer
@@ -61,6 +62,6 @@ The HTTP server binds to `127.0.0.1`. Mutating HTTP endpoints reject cross-origi
 
 ## Live layer
 
-`swarmwatch attach` tails a growing source and appends converted events into `.swarmwatch/events.jsonl` while the dashboard polls `/api/state`. `swarmwatch run --agent ID -- <command>` supervises a child process, emits start/message/done/error events live, and watches `.swarmwatch/kills.jsonl`; a matching kill marker terminates the supervised child and emits a killed event.
+`swarmwatch attach` tails a growing source and appends converted events into `.swarmwatch/events.jsonl` while the dashboard polls `/api/state`. `swarmwatch run --agent ID -- <command>` supervises a child process, emits start/message/done/error events live, and watches `.swarmwatch/kills.jsonl`; a matching kill marker terminates the supervised child and emits a killed event. Those are stream-live and process-live respectively, not magic injection into arbitrary sessions.
 
 Clock-relative `stuck_agent` and `dead_agent` alerts are gated to live mode. Replay/demo/verify/bench use replay mode so old transcripts do not produce misleading current-time alarms.

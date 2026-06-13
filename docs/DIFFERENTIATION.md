@@ -2,7 +2,7 @@
 
 Date: 2026-06-13
 
-SwarmWatch is intentionally not another hosted trace warehouse. The differentiated wedge is **local live swarm mission control**: see the agent graph while the run is happening, detect structural failures in that graph, and close the operator loop with a kill request or supervised-process termination.
+SwarmWatch is intentionally not another hosted trace warehouse. The differentiated wedge is **local live swarm mission control** with named mechanisms: **process-live** supervision for agents launched under `swarmwatch run`, and **stream-live** following for frameworks that emit a growing event stream. See the agent graph while the run is happening, detect structural failures in that graph, and close the operator loop with a kill request or supervised-process termination.
 
 ## Market scan
 
@@ -21,7 +21,7 @@ These products are credible. SwarmWatch should not pretend they do not exist, an
 
 SwarmWatch owns the gap between terminal chaos and trace warehousing:
 
-1. **Local-first live operator cockpit** — `swarmwatch attach` follows a growing event stream; `swarmwatch run` supervises a child process; `watch` serves a local dashboard and API without a SaaS account.
+1. **Local-first live operator cockpit** — `swarmwatch attach` stream-live follows a growing event stream; `swarmwatch run` process-live supervises a child process; `watch` serves a local dashboard and API without a SaaS account.
 2. **Structural swarm safety** — detectors reason over delegation topology (`circular_delegation`, `high_fanout`) and per-agent economics (`runaway_cost`) rather than only rendering generic spans.
 3. **Honest live vs replay semantics** — clock-relative alerts (`stuck_agent`, `dead_agent`) are live-only so a replayed old transcript cannot masquerade as a current outage.
 4. **Action loop** — external sources get durable kill-request markers; supervised processes can actually be terminated when their agent receives a kill marker.
@@ -33,7 +33,7 @@ SwarmWatch owns the gap between terminal chaos and trace warehousing:
 
 The moat is completeness across the operator lifecycle, not one algorithm:
 
-- **Attach:** consume a live stream or supervise a command.
+- **Capture:** stream-live follow a growing event stream or process-live supervise a command launched under SwarmWatch.
 - **Normalize:** convert framework events, transcript events, and OpenInference/OTLP spans into one deterministic event contract.
 - **Analyze:** fold events into agents, edges, totals, and evidence-backed alarms.
 - **Act:** expose token-protected local mutations and kill markers.
@@ -52,3 +52,5 @@ SwarmWatch is not a replacement for:
 - enterprise trace warehouse search.
 
 SwarmWatch is the operator-control layer that can run before, beside, or underneath those systems. It should make the first ten minutes of a broken multi-agent run obvious and actionable.
+
+It is also not an injection-live debugger. If a framework session was already running, was not launched under SwarmWatch, and does not write a followable event stream, v0.1 does not introspect it.
