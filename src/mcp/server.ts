@@ -1,5 +1,6 @@
 import { appendEvent, initWorkspace, readEvents, workspacePaths } from '../core/store.js';
 import { analyzeEvents } from '../core/analyze.js';
+import { verifyEvents } from '../core/verify.js';
 import { assertEvent, makeEvent } from '../core/event.js';
 import type { SwarmEvent } from '../core/types.js';
 
@@ -22,12 +23,14 @@ export async function runMcp(root = process.cwd()): Promise<void> {
         else if (msg.method === 'tools/list') rpc(msg.id, { tools: [
           { name: 'swarm_state', description: 'Return current SwarmWatch state and drift alarms.', inputSchema: { type: 'object', properties: {} } },
           { name: 'swarm_ingest', description: 'Append one swarm event.', inputSchema: { type: 'object', properties: { type: { type: 'string' }, agentId: { type: 'string' }, targetAgentId: { type: 'string' }, costUsd: { type: 'number' }, message: { type: 'string' } }, required: ['type', 'agentId'] } },
-          { name: 'swarm_kill', description: 'Request a local kill marker for an agent.', inputSchema: { type: 'object', properties: { agentId: { type: 'string' } }, required: ['agentId'] } }
+          { name: 'swarm_kill', description: 'Request a local kill marker for an agent.', inputSchema: { type: 'object', properties: { agentId: { type: 'string' } }, required: ['agentId'] } },
+          { name: 'swarm_verify', description: 'Verify event log integrity, schema, and current alarms.', inputSchema: { type: 'object', properties: {} } }
         ] });
         else if (msg.method === 'tools/call') {
           const name = msg.params?.name; const args = msg.params?.arguments ?? {};
           if (name === 'swarm_state') rpc(msg.id, { content: [{ type: 'text', text: JSON.stringify(analyzeEvents(await readEvents(eventsFile), eventsFile), null, 2) }] });
           else if (name === 'swarm_ingest') { const ev = assertEvent({ ...makeEvent(args as Partial<SwarmEvent> & { type: SwarmEvent['type']; agentId: string }), ...args }); await appendEvent(eventsFile, ev); rpc(msg.id, { content: [{ type: 'text', text: JSON.stringify(ev) }] }); }
+          else if (name === 'swarm_verify') rpc(msg.id, { content: [{ type: 'text', text: JSON.stringify(verifyEvents(await readEvents(eventsFile), eventsFile), null, 2) }] });
           else if (name === 'swarm_kill') { const ev = makeEvent({ type: 'kill_requested', agentId: String(args.agentId), status: 'killed', message: 'MCP kill requested' }); await appendEvent(eventsFile, ev); rpc(msg.id, { content: [{ type: 'text', text: JSON.stringify({ ok: true, event: ev }) }] }); }
           else err(msg.id, `unknown tool ${name}`);
         } else if (msg.id !== undefined) rpc(msg.id, {});

@@ -3,4 +3,7 @@ export { makeEvent, assertEvent, parseJsonl } from './core/event.js';
 export { appendEvent, readEvents, initWorkspace, workspacePaths } from './core/store.js';
 export { startServer } from './server/server.js';
 export { readClaudeFlowState } from './adapters/claudeFlow.js';
+export { importEvents, type ImportAdapter } from './adapters/importers.js';
+export { verifyEvents, digestEvents, type VerifyResult, type VerifyIssue } from './core/verify.js';
+export { loadConfig, parseConfig, DEFAULT_CONFIG, type SwarmWatchConfig } from './core/config.js';
 export type { SwarmEvent, SwarmState, AgentNode, AgentEdge, SwarmAlert, AnalyzeOptions } from './core/types.js';

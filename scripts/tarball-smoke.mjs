@@ -20,8 +20,9 @@ try {
     const { stdout } = await exec(bin, ['watch', '--once', '--json'], { cwd: tmp });
     const state = JSON.parse(stdout);
     if (state.totals.agents !== 1) throw new Error(`expected 1 agent, got ${stdout}`);
-    const { stdout: replay } = await exec(bin, ['replay', join(root, 'examples/seed-session.jsonl')], { cwd: tmp });
+    const { stdout: replay } = await exec(bin, ['demo'], { cwd: tmp });
     if (!replay.includes('circular_delegation')) throw new Error(`smoke replay did not detect circular_delegation: ${replay}`);
+    await exec(process.execPath, [join(tmp, 'node_modules', 'swarmwatch', 'bench', 'run.mjs')], { cwd: tmp });
     console.log('tarball smoke passed');
   } finally { await unlink(tarball).catch(() => {}); }
 } finally { await rm(tmp, { recursive: true, force: true }); }

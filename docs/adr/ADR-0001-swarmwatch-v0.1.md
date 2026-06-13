@@ -16,11 +16,11 @@ SwarmWatch gives local, real-time visibility into multi-agent swarms: topology, 
 
 ## Scope
 
-v0.1 is local-first and framework-agnostic through a generic JSONL event contract. It ships four front doors:
+v0.1 is local-first and framework-agnostic through a generic JSONL event contract plus import adapters for LangGraph event streams, Claude transcript JSONL, and best-effort claude-flow state. It ships four front doors:
 
-1. CLI: `init`, `watch`, `serve`, `ingest`, `replay`, `kill`, `mcp`.
-2. HTTP: `GET /api/state`, `GET /api/events`, `POST /api/events`, `POST /api/kill/:agentId`, `GET /api/health`.
-3. MCP: `swarm_state`, `swarm_ingest`, `swarm_kill`.
+1. CLI: `init`, `watch`, `serve`, `ingest`, `import`, `demo`, `replay`, `verify`, `doctor`, `kill`, `mcp`.
+2. HTTP: `GET /api/state`, `GET /api/events`, `GET /api/verify`, `POST /api/events`, `POST /api/kill/:agentId`, `GET /api/health`.
+3. MCP: `swarm_state`, `swarm_ingest`, `swarm_kill`, `swarm_verify`.
 4. Library API: `analyzeEvents`, `startServer`, event-store helpers.
 
 ## Event contract
@@ -48,3 +48,7 @@ Baseline named honestly: post-hoc manual trace review. v0.1 does not claim to be
 - No remote SaaS.
 - No process-level kill of arbitrary agents yet; v0.1 writes a kill marker and exposes the event so orchestrators can honor it safely.
 - No private prompt/thought scraping; event ingestion is explicit.
+
+## Verification layer
+
+`swarmwatch verify` and `GET /api/verify` parse the event log, validate duplicate IDs/timestamps/negative counters, compute a sha256 digest, run detectors, and return structured issues. Exit codes: 0 = valid/no critical alarms, 1 = valid with critical alarms, 2 = invalid/precondition.

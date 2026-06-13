@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { saveDefaultConfig } from './config.js';
 import { assertEvent, parseJsonl } from './event.js';
 import type { SwarmEvent } from './types.js';
 
@@ -18,9 +19,7 @@ export async function initWorkspace(root = process.cwd()): Promise<ReturnType<ty
   await mkdir(paths.dir, { recursive: true });
   if (!existsSync(paths.events)) await writeFile(paths.events, '', 'utf8');
   if (!existsSync(paths.kills)) await writeFile(paths.kills, '', 'utf8');
-  if (!existsSync(paths.config)) {
-    await writeFile(paths.config, JSON.stringify({ costLimitUsd: 5, stuckMs: 300000, deadMs: 900000, fanoutLimit: 6 }, null, 2) + '\n');
-  }
+  await saveDefaultConfig(paths.config);
   return paths;
 }
 

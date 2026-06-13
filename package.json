@@ -1,7 +1,7 @@
 {
   "name": "swarmwatch",
   "version": "0.1.0",
-  "description": "Local-first mission control for multi-agent swarms: live topology, cost meters, drift alarms, and kill switches.",
+  "description": "Local-first mission control for multi-agent swarms: live topology, cost meters, drift alarms, and kill-request markers.",
   "type": "module",
   "license": "MIT",
   "author": "rudycelekli",
@@ -32,7 +32,11 @@
     "README.md",
     "LICENSE",
     "NOTICE",
-    "examples"
+    "examples",
+    "docs",
+    "bench",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md"
   ],
   "scripts": {
     "build": "tsc",

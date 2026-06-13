@@ -22,3 +22,10 @@ Prompt: Six months from now SwarmWatch failed despite launching. Why?
 ## Exit condition
 
 The first implementation must include endpoint tests, a replay fixture, and documentation that makes the kill limitation structural rather than hidden in an FAQ.
+
+## Applied in v0.1 hardening
+
+- Added `swarmwatch verify`, `GET /api/verify`, and `swarm_verify` so the proof/health layer is callable from every surface.
+- Renamed public wording from kill switch to kill-request marker to avoid overclaiming process termination.
+- Added import adapters for LangGraph, Claude transcript JSONL, generic JSONL, and claude-flow state so the core is not locked to one framework.
+- Added endpoint tests for CLI, HTTP, and MCP plus a tarball smoke test that installs the packed npm artifact in a clean temp project.

@@ -1,0 +1,2 @@
+{"type":"assistant","session_id":"s1","timestamp":"2026-06-13T00:00:00.000Z","message":{"model":"claude-test","content":[{"type":"text","text":"I will spawn a coder"}]}}
+{"type":"result","session_id":"s1","timestamp":"2026-06-13T00:00:02.000Z","subtype":"success","message":{"model":"claude-test","content":[]}}

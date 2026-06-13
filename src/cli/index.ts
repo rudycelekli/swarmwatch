@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { analyzeEvents } from '../core/analyze.js';
+import { loadConfig } from '../core/config.js';
+import { verifyEvents } from '../core/verify.js';
 import { makeEvent, parseJsonl } from '../core/event.js';
-import { appendEvent, initWorkspace, readEvents, workspacePaths } from '../core/store.js';
+import { appendEvent, initWorkspace, readEvents } from '../core/store.js';
 import { startServer } from '../server/server.js';
 import { runMcp } from '../mcp/server.js';
 import { readClaudeFlowState } from '../adapters/claudeFlow.js';
+import { importEvents, type ImportAdapter } from '../adapters/importers.js';
 import type { SwarmEvent } from '../core/types.js';
 
 function help() {
@@ -18,7 +21,11 @@ Usage:
   swarmwatch watch [--root DIR] [--events FILE] [--port N] [--json] [--once]
   swarmwatch serve [--root DIR] [--events FILE] [--port N]
   swarmwatch ingest --type TYPE --agent ID [--target ID] [--parent ID] [--cost USD] [--tokens N] [--message TEXT]
+  swarmwatch import --adapter ADAPTER [--file FILE] [--dry-run]
+  swarmwatch demo [--json]
   swarmwatch replay <events.jsonl> [--json]
+  swarmwatch verify [--events FILE] [--json]
+  swarmwatch doctor [--root DIR]
   swarmwatch kill <agentId> [--root DIR]
   swarmwatch mcp [--root DIR]
 
@@ -26,6 +33,9 @@ Examples:
   npx swarmwatch init
   npx swarmwatch ingest --type agent_started --agent planner
   npx swarmwatch ingest --type delegation --agent planner --target coder
+  npx swarmwatch demo
+  npx swarmwatch import --adapter claude-transcript --file transcript.jsonl
+  npx swarmwatch verify
   npx swarmwatch watch --port 8787
 `);
 }
@@ -42,7 +52,6 @@ async function main() {
   const root = resolve(arg('--root', process.cwd())!);
   if (cmd === 'init') {
     const paths = await initWorkspace(root);
-    await mkdir(dirname(resolve(root, 'examples', 'seed-session.jsonl')), { recursive: true });
     console.log(`SwarmWatch initialized\n  events: ${paths.events}\n  config: ${paths.config}`);
     return;
   }
@@ -60,6 +69,52 @@ async function main() {
     });
     await appendEvent(paths.events, event);
     console.log(JSON.stringify(event, null, 2));
+    return;
+  }
+  if (cmd === 'import') {
+    const paths = await initWorkspace(root);
+    const adapter = (arg('--adapter') ?? 'swarmwatch') as ImportAdapter;
+    const imported = await importEvents({ adapter, file: arg('--file'), root });
+    if (!flag('--dry-run')) for (const ev of imported) await appendEvent(paths.events, ev);
+    console.log(JSON.stringify({ ok: true, adapter, imported: imported.length, dryRun: flag('--dry-run') }, null, 2));
+    return;
+  }
+  if (cmd === 'verify') {
+    const paths = await initWorkspace(root);
+    const eventsFile = resolve(arg('--events', paths.events)!);
+    const cfg = await loadConfig(paths.config);
+    const result = verifyEvents(await eventsFrom(eventsFile, root), eventsFile, cfg);
+    if (flag('--json')) console.log(JSON.stringify(result, null, 2));
+    else {
+      console.log(`SwarmWatch verify: ${result.ok ? 'ok' : 'invalid'} · ${result.events} events · sha256 ${result.digest.slice(0, 16)}…`);
+      for (const issue of result.issues) console.log(`- [${issue.severity}] ${issue.code}: ${issue.message}`);
+      console.log(`Alerts: ${result.state.alerts.length}`);
+    }
+    process.exitCode = result.ok ? (result.state.alerts.some((a) => a.severity === 'critical') ? 1 : 0) : 2;
+    return;
+  }
+  if (cmd === 'doctor') {
+    const paths = await initWorkspace(root);
+    const events = await eventsFrom(paths.events, root);
+    const cfg = await loadConfig(paths.config);
+    const result = verifyEvents(events, paths.events, cfg);
+    const checks = [
+      { name: 'node>=20', ok: Number(process.versions.node.split('.')[0]) >= 20 },
+      { name: 'workspace', ok: true, path: paths.dir },
+      { name: 'events-parse', ok: result.ok, events: result.events },
+      { name: 'config', ok: true, config: cfg },
+    ];
+    console.log(JSON.stringify({ ok: checks.every((c) => c.ok), checks, alerts: result.state.alerts.length }, null, 2));
+    process.exitCode = checks.every((c) => c.ok) ? 0 : 2;
+    return;
+  }
+  if (cmd === 'demo') {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const file = resolve(here, '..', '..', 'examples', 'seed-session.jsonl');
+    const events = parseJsonl(await readFile(file, 'utf8'));
+    const state = analyzeEvents(events, file, { costLimitUsd: 1, stuckMs: 1000, deadMs: 5000, now: new Date('2026-06-13T00:00:10.000Z') });
+    if (flag('--json')) console.log(JSON.stringify(state, null, 2));
+    else { console.log(`SwarmWatch demo: ${state.totals.events} events, ${state.totals.agents} agents, ${state.alerts.length} alerts`); for (const a of state.alerts) console.log(`- [${a.severity}] ${a.kind}: ${a.message}`); }
     return;
   }
   if (cmd === 'replay') {
@@ -83,7 +138,8 @@ async function main() {
     const paths = await initWorkspace(root);
     const eventsFile = resolve(arg('--events', paths.events)!);
     if (cmd === 'watch' && (flag('--once') || flag('--json'))) {
-      const state = analyzeEvents(await eventsFrom(eventsFile, root), eventsFile);
+      const cfg = await loadConfig(paths.config);
+      const state = analyzeEvents(await eventsFrom(eventsFile, root), eventsFile, cfg);
       console.log(JSON.stringify(state, null, 2));
       return;
     }

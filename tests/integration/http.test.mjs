@@ -21,6 +21,9 @@ test('HTTP endpoints ingest events, expose state, and record kill requests', asy
       res = await fetch(`http://127.0.0.1:${s.port}/api/state`);
       const killed = await res.json();
       assert.equal(killed.agents.find((a) => a.id === 'planner').status, 'killed');
+      res = await fetch(`http://127.0.0.1:${s.port}/api/verify`);
+      const verify = await res.json();
+      assert.equal(verify.ok, true);
     } finally { await s.close(); }
   } finally { await rm(root, { recursive:true, force:true }); }
 });

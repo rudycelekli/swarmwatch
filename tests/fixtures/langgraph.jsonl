@@ -1,0 +1,3 @@
+{"event":"on_chain_start","name":"planner","timestamp":"2026-06-13T00:00:00.000Z","data":{"input":"plan"}}
+{"event":"on_chain_stream","name":"planner","timestamp":"2026-06-13T00:00:01.000Z","data":"thinking"}
+{"event":"on_chain_end","name":"planner","timestamp":"2026-06-13T00:00:02.000Z","data":{"output":"done"}}

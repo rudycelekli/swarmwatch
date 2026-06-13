@@ -1,6 +1,8 @@
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { analyzeEvents } from '../core/analyze.js';
+import { loadConfig } from '../core/config.js';
+import { verifyEvents } from '../core/verify.js';
 import { appendEvent, appendKill, initWorkspace, readEvents, workspacePaths } from '../core/store.js';
 import { assertEvent, makeEvent } from '../core/event.js';
 import { dashboardHtml } from './html.js';
@@ -30,7 +32,8 @@ export async function startServer(opts: ServeOptions = {}): Promise<{ port: numb
       if (req.method === 'GET' && url.pathname === '/') return send(res, 200, dashboardHtml(), 'text/html; charset=utf-8');
       if (req.method === 'GET' && url.pathname === '/api/health') return send(res, 200, { ok: true, service: 'swarmwatch' });
       if (req.method === 'GET' && url.pathname === '/api/events') return send(res, 200, await readEvents(eventsFile));
-      if (req.method === 'GET' && url.pathname === '/api/state') return send(res, 200, analyzeEvents(await readEvents(eventsFile), eventsFile, opts.analyze));
+      if (req.method === 'GET' && url.pathname === '/api/verify') { const cfg = await loadConfig(workspacePaths(root).config); return send(res, 200, verifyEvents(await readEvents(eventsFile), eventsFile, { ...cfg, ...opts.analyze })); }
+      if (req.method === 'GET' && url.pathname === '/api/state') { const cfg = await loadConfig(workspacePaths(root).config); return send(res, 200, analyzeEvents(await readEvents(eventsFile), eventsFile, { ...cfg, ...opts.analyze })); }
       if (req.method === 'POST' && url.pathname === '/api/events') {
         const raw = await body(req);
         const event = assertEvent({ ...makeEvent(raw as Partial<SwarmEvent> & { type: SwarmEvent['type']; agentId: string }), ...(raw as object) });

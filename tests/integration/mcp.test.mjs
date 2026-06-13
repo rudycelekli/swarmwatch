@@ -28,11 +28,15 @@ test('MCP tools list, ingest, and state work over stdio', async () => {
     proc.stdin.write(JSON.stringify({ jsonrpc:'2.0', id:2, method:'tools/list', params:{} }) + '\n');
     const tools = await readLine(proc);
     assert.ok(tools.result.tools.some((t) => t.name === 'swarm_state'));
+    assert.ok(tools.result.tools.some((t) => t.name === 'swarm_verify'));
     proc.stdin.write(JSON.stringify({ jsonrpc:'2.0', id:3, method:'tools/call', params:{ name:'swarm_ingest', arguments:{ type:'agent_started', agentId:'planner' } } }) + '\n');
     assert.match((await readLine(proc)).result.content[0].text, /planner/);
     proc.stdin.write(JSON.stringify({ jsonrpc:'2.0', id:4, method:'tools/call', params:{ name:'swarm_state', arguments:{} } }) + '\n');
     const state = JSON.parse((await readLine(proc)).result.content[0].text);
     assert.equal(state.totals.agents, 1);
+    proc.stdin.write(JSON.stringify({ jsonrpc:'2.0', id:5, method:'tools/call', params:{ name:'swarm_verify', arguments:{} } }) + '\n');
+    const verify = JSON.parse((await readLine(proc)).result.content[0].text);
+    assert.equal(verify.ok, true);
   } finally {
     proc.kill('SIGTERM');
     await rm(root, { recursive:true, force:true });
