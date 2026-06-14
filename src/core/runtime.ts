@@ -42,3 +42,19 @@ export async function requestKill(root: string, eventsFile: string, agentId: str
   await appendKill(root, agentId, reason);
   return event;
 }
+
+export async function respondOperator(root: string, eventsFile: string, requestId: string, response: string, action = 'respond'): Promise<SwarmEvent> {
+  await initWorkspace(root);
+  const state = await loadObservedState(root, eventsFile);
+  const request = state.operatorRequests.find((r) => r.requestId === requestId && r.status === 'pending');
+  if (!request) throw Object.assign(new Error(`pending operator request not found: ${requestId}`), { statusCode: 404 });
+  const event = makeEvent({
+    type: 'operator_response',
+    agentId: request.agentId,
+    message: response || action,
+    framework: 'swarmwatch',
+    metadata: { requestId, action, respondedBy: 'operator' },
+  });
+  await appendEvent(eventsFile, event);
+  return event;
+}

@@ -4,6 +4,7 @@ import type { SwarmEvent, SwarmEventType } from './types.js';
 export const EVENT_TYPES = new Set<SwarmEventType>([
   'agent_started', 'agent_heartbeat', 'agent_message', 'tool_call', 'cost',
   'delegation', 'agent_done', 'agent_error', 'kill_requested',
+  'operator_request', 'operator_response',
 ]);
 
 export function nowIso(): string { return new Date().toISOString(); }

@@ -1,7 +1,7 @@
 {
   "name": "swarmwatch",
   "version": "0.1.0",
-  "description": "Claude Code controls for SwarmWatch: process-live run, stream-live attach, scoped kill requests, onboarding detection, and quiet structural alarms.",
+  "description": "Claude Code controls for SwarmWatch: process-live run, stream-live attach, Operator Inbox responses, scoped kill requests, onboarding detection, and quiet structural alarms.",
   "author": {
     "name": "rudycelekli",
     "url": "https://github.com/rudycelekli"
@@ -22,6 +22,7 @@
     "./commands/swarmwatch-init.md",
     "./commands/swarmwatch-run.md",
     "./commands/swarmwatch-attach.md",
+    "./commands/swarmwatch-operator.md",
     "./commands/swarmwatch-kill.md"
   ]
 }

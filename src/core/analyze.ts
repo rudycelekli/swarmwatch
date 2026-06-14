@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { AgentEdge, AgentNode, AnalyzeOptions, SwarmAlert, SwarmEvent, SwarmState } from './types.js';
+import type { AgentEdge, AgentNode, AnalyzeOptions, OperatorRequest, SwarmAlert, SwarmEvent, SwarmState } from './types.js';
 
 function alertId(kind: string, parts: unknown[]): string {
   return createHash('sha256').update(kind + JSON.stringify(parts)).digest('hex').slice(0, 16);
@@ -30,6 +30,18 @@ function hasCycle(edges: AgentEdge[]): string[] | undefined {
   return undefined;
 }
 
+function metadataString(e: SwarmEvent, key: string): string | undefined {
+  const value = e.metadata?.[key];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function metadataChoices(e: SwarmEvent): string[] | undefined {
+  const value = e.metadata?.choices;
+  if (!Array.isArray(value)) return undefined;
+  const choices = value.filter((x): x is string => typeof x === 'string' && x.trim() !== '');
+  return choices.length ? choices : undefined;
+}
+
 export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: AnalyzeOptions = {}): SwarmState {
   const now = opts.now ?? new Date();
   const costLimitUsd = opts.costLimitUsd ?? 5;
@@ -39,6 +51,7 @@ export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: Ana
   const liveMode = opts.mode !== 'replay';
   const agents = new Map<string, AgentNode>();
   const edges = new Map<string, AgentEdge>();
+  const operatorRequests = new Map<string, OperatorRequest>();
   const sorted = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
 
   for (const e of sorted) {
@@ -58,7 +71,8 @@ export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: Ana
     node.parentId ??= e.parentId;
     node.framework = e.framework ?? node.framework;
     node.lastSeen = e.ts > node.lastSeen ? e.ts : node.lastSeen;
-    if (e.type === 'agent_started' || e.type === 'agent_heartbeat' || e.type === 'agent_message' || e.type === 'tool_call' || e.type === 'delegation') node.status = 'running';
+    if (e.type === 'agent_started' || e.type === 'agent_heartbeat' || e.type === 'agent_message' || e.type === 'tool_call' || e.type === 'delegation' || e.type === 'operator_response') node.status = 'running';
+    if (e.type === 'operator_request') node.status = 'waiting';
     if (e.status === 'done' || e.type === 'agent_done') node.status = 'done';
     if (e.status === 'error' || e.type === 'agent_error') node.status = 'error';
     if (e.status === 'killed' || e.type === 'kill_requested') node.status = 'killed';
@@ -70,9 +84,41 @@ export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: Ana
     agents.set(e.agentId, node);
     if (e.parentId) upsertEdge(edges, e.parentId, e.agentId, 'delegation', e.ts);
     if (e.targetAgentId) upsertEdge(edges, e.agentId, e.targetAgentId, e.type === 'delegation' ? 'delegation' : 'message', e.ts);
+    if (e.type === 'operator_request') {
+      const requestId = metadataString(e, 'requestId') ?? e.id;
+      operatorRequests.set(requestId, {
+        requestId,
+        eventId: e.id,
+        agentId: e.agentId,
+        message: e.message ?? 'Operator input requested.',
+        ts: e.ts,
+        status: 'pending',
+        kind: metadataString(e, 'kind'),
+        priority: metadataString(e, 'priority'),
+        choices: metadataChoices(e),
+      });
+    } else if (e.type === 'operator_response') {
+      const requestId = metadataString(e, 'requestId');
+      if (requestId) {
+        const request = operatorRequests.get(requestId);
+        if (request) {
+          request.status = 'responded';
+          request.response = {
+            eventId: e.id,
+            agentId: e.agentId,
+            message: e.message ?? '',
+            action: metadataString(e, 'action'),
+            ts: e.ts,
+          };
+        }
+      }
+    }
   }
 
   const agentList = [...agents.values()].sort((a, b) => a.id.localeCompare(b.id));
+  const operatorRequestList = [...operatorRequests.values()].sort((a, b) => b.ts.localeCompare(a.ts));
+  const pendingOperatorAgentIds = new Set(operatorRequestList.filter((r) => r.status === 'pending').map((r) => r.agentId));
+  for (const agent of agentList) if (pendingOperatorAgentIds.has(agent.id) && agent.status === 'running') agent.status = 'waiting';
   const edgeList = [...edges.values()].sort((a, b) => `${a.from}${a.to}${a.kind}`.localeCompare(`${b.from}${b.to}${b.kind}`));
   const alerts: SwarmAlert[] = [];
   for (const a of agentList) {
@@ -86,6 +132,7 @@ export function analyzeEvents(events: SwarmEvent[], source = 'memory', opts: Ana
   for (const [id, count] of fanout) if (count > fanoutLimit) alerts.push({ id: alertId('high_fanout', [id, count]), kind: 'high_fanout', severity: 'warn', agentId: id, message: `${id} delegated to ${count} agents`, evidence: { count, limit: fanoutLimit }, ts: now.toISOString() });
   const cycle = hasCycle(edgeList);
   if (cycle) alerts.push({ id: alertId('circular_delegation', cycle), kind: 'circular_delegation', severity: 'critical', message: `circular delegation detected: ${cycle.join(' → ')}`, evidence: { cycle }, ts: now.toISOString() });
-  const totals = { agents: agentList.length, running: agentList.filter((a) => a.status === 'running').length, costUsd: agentList.reduce((n, a) => n + a.costUsd, 0), tokens: agentList.reduce((n, a) => n + a.tokens, 0), events: events.length };
-  return { generatedAt: now.toISOString(), source, agents: agentList, edges: edgeList, alerts, totals };
+  const pendingOperatorRequests = operatorRequestList.filter((r) => r.status === 'pending').length;
+  const totals = { agents: agentList.length, running: agentList.filter((a) => a.status === 'running' || a.status === 'waiting').length, costUsd: agentList.reduce((n, a) => n + a.costUsd, 0), tokens: agentList.reduce((n, a) => n + a.tokens, 0), events: events.length, operatorRequests: pendingOperatorRequests };
+  return { generatedAt: now.toISOString(), source, agents: agentList, edges: edgeList, alerts, operatorRequests: operatorRequestList, totals };
 }

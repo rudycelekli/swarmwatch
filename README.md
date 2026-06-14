@@ -18,6 +18,8 @@ flowchart LR
   C --> H["OTLP-style export"]
   D --> G["Kill request marker"]
   F --> G
+  D --> I["Operator response event"]
+  F --> I
 ```
 
 ## Quickstart
@@ -40,7 +42,7 @@ npx swarmwatch verify    # validates the event log and reports alarms
 npx swarmwatch watch
 ```
 
-Open the printed `http://127.0.0.1:8787` URL. The dashboard polls the local API while the source is running; no SaaS account and no secrets are required. Mutating HTTP calls require the printed `x-swarmwatch-token`.
+Open the printed `http://127.0.0.1:8787` URL. The dashboard polls the local API while the source is running; no SaaS account and no secrets are required. Mutating HTTP calls require the printed `x-swarmwatch-token`. If an agent emits an `operator_request`, the dashboard shows it in the Operator Inbox and lets the user append an auditable `operator_response`.
 
 Import external traces:
 
@@ -65,7 +67,7 @@ SwarmWatch can be installed as a Claude Code plugin marketplace:
 /swarmwatch:swarmwatch-init
 ```
 
-Claude Code namespaces plugin commands, so the installed commands are `/swarmwatch:swarmwatch-init`, `/swarmwatch:swarmwatch-run`, `/swarmwatch:swarmwatch-attach`, and `/swarmwatch:swarmwatch-kill`. The plugin also ships `swarmwatch-alarm`, an ambient structural-alarm skill backed by a quiet monitor. It stays silent unless an active process-live or stream-live session produces a new `runaway_cost`, `circular_delegation`, or `high_fanout` alert. It does not claim injection-live introspection and does not surface replay-mode `stuck_agent` / `dead_agent` alarms.
+Claude Code namespaces plugin commands, so the installed commands are `/swarmwatch:swarmwatch-init`, `/swarmwatch:swarmwatch-run`, `/swarmwatch:swarmwatch-attach`, `/swarmwatch:swarmwatch-operator`, and `/swarmwatch:swarmwatch-kill`. The plugin also ships `swarmwatch-alarm`, an ambient structural-alarm skill backed by a quiet monitor. It stays silent unless an active process-live or stream-live session produces a new `runaway_cost`, `circular_delegation`, or `high_fanout` alert. It does not claim injection-live introspection and does not surface replay-mode `stuck_agent` / `dead_agent` alarms.
 
 The plugin wrappers use a local project/global `swarmwatch` binary when available and otherwise fall back to `npx -y github:rudycelekli/swarmwatch`, so marketplace install works before the npm package is published.
 
@@ -85,6 +87,9 @@ await swarm.started('planning');
 await swarm.delegation('coder', 'implement the endpoint');
 await swarm.tool('edit_file', { tokens: 1200 });
 await swarm.cost(0.03, 2400);
+await swarm.operatorRequest('Approve the migration before I edit package.json?', {
+  metadata: { kind: 'approval', priority: 'high', choices: ['approve', 'deny'] }
+});
 await swarm.done('ready for review');
 ```
 
@@ -104,6 +109,7 @@ By default this appends to `.swarmwatch/events.jsonl`, so `npx swarmwatch watch`
 - `swarmwatch demo` — run the packaged deterministic replay from any directory.
 - `swarmwatch replay <events.jsonl>` — analyze a captured session.
 - `swarmwatch verify` — validate event integrity, print digest, and report alarms.
+- `swarmwatch operator list|respond` — list pending human-input requests and append auditable `operator_response` events.
 - `swarmwatch doctor` — check local install/workspace/config health.
 - `swarmwatch kill <agentId>` — append a local kill-request event.
 - `swarmwatch mcp` — stdio MCP server.
@@ -116,19 +122,22 @@ By default this appends to `.swarmwatch/events.jsonl`, so `npx swarmwatch watch`
 - `GET /api/config`
 - `GET /api/verify`
 - `POST /api/events` — requires local `x-swarmwatch-token` from server startup/dashboard
+- `POST /api/operator/:requestId` — append an `operator_response` for a pending request; requires local `x-swarmwatch-token`
 - `POST /api/kill/:agentId` — requires local `x-swarmwatch-token` from server startup/dashboard
 
 ### MCP tools
 
 - `swarm_state`
 - `swarm_ingest`
+- `swarm_operator_list`
+- `swarm_operator_respond`
 - `swarm_kill`
 - `swarm_verify`
 
 ### Library
 
 ```js
-import { analyzeEvents, startServer, makeEvent, createSwarmWatchReporter, importOtelEvents, exportOtel } from 'swarmwatch';
+import { analyzeEvents, startServer, makeEvent, respondOperator, createSwarmWatchReporter, importOtelEvents, exportOtel } from 'swarmwatch';
 ```
 
 ## Open trace bridge
@@ -149,7 +158,7 @@ SwarmWatch is built to sit beside standards-based observability stacks rather th
 {"id":"1","ts":"2026-06-13T00:00:00.000Z","type":"agent_started","agentId":"planner"}
 ```
 
-Useful fields: `parentId`, `targetAgentId`, `framework`, `message`, `tool`, `costUsd`, `tokens`, `status`, `metadata`. Numeric fields must be finite and non-negative; invalid events are rejected before they can corrupt the log.
+Useful fields: `parentId`, `targetAgentId`, `framework`, `message`, `tool`, `costUsd`, `tokens`, `status`, `metadata`. Numeric fields must be finite and non-negative; invalid events are rejected before they can corrupt the log. Agents that need the human/operator emit `operator_request` with `metadata.requestId`, optional `metadata.kind`, `metadata.priority`, and `metadata.choices`; dashboard responses append `operator_response` with the same request id.
 
 
 ## Import privacy

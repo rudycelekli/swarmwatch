@@ -7,7 +7,9 @@ export type SwarmEventType =
   | 'delegation'
   | 'agent_done'
   | 'agent_error'
-  | 'kill_requested';
+  | 'kill_requested'
+  | 'operator_request'
+  | 'operator_response';
 
 export interface SwarmEvent {
   id: string;
@@ -21,7 +23,7 @@ export interface SwarmEvent {
   tool?: string;
   costUsd?: number;
   tokens?: number;
-  status?: 'running' | 'done' | 'error' | 'killed';
+  status?: 'running' | 'done' | 'error' | 'killed' | 'waiting';
   metadata?: Record<string, unknown>;
 }
 
@@ -29,7 +31,7 @@ export interface AgentNode {
   id: string;
   parentId?: string;
   framework: string;
-  status: 'running' | 'done' | 'error' | 'killed' | 'unknown';
+  status: 'running' | 'done' | 'error' | 'killed' | 'waiting' | 'unknown';
   firstSeen: string;
   lastSeen: string;
   messageCount: number;
@@ -59,13 +61,33 @@ export interface SwarmAlert {
   ts: string;
 }
 
+export interface OperatorRequest {
+  requestId: string;
+  eventId: string;
+  agentId: string;
+  message: string;
+  ts: string;
+  status: 'pending' | 'responded';
+  kind?: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent' | string;
+  choices?: string[];
+  response?: {
+    eventId: string;
+    agentId: string;
+    message: string;
+    action?: string;
+    ts: string;
+  };
+}
+
 export interface SwarmState {
   generatedAt: string;
   source: string;
   agents: AgentNode[];
   edges: AgentEdge[];
   alerts: SwarmAlert[];
-  totals: { agents: number; running: number; costUsd: number; tokens: number; events: number };
+  operatorRequests: OperatorRequest[];
+  totals: { agents: number; running: number; costUsd: number; tokens: number; events: number; operatorRequests: number };
 }
 
 export interface AnalyzeOptions {
@@ -76,4 +98,3 @@ export interface AnalyzeOptions {
   fanoutLimit?: number;
   mode?: 'live' | 'replay';
 }
-

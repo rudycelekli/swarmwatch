@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { appendEvent, initWorkspace, workspacePaths } from '../core/store.js';
 import { assertEvent, makeEvent } from '../core/event.js';
-import { loadObservedEvents, loadObservedState, requestKill, verifyObserved } from '../core/runtime.js';
+import { loadObservedEvents, loadObservedState, requestKill, respondOperator, verifyObserved } from '../core/runtime.js';
 import { dashboardHtml } from './html.js';
 import type { AnalyzeOptions, SwarmEvent } from '../core/types.js';
 
@@ -63,6 +63,15 @@ export async function startServer(opts: ServeOptions = {}): Promise<{ port: numb
         const agentId = decodeURIComponent(url.pathname.slice('/api/kill/'.length));
         const event = await requestKill(root, eventsFile, agentId, 'operator requested kill');
         return send(req, res, 202, { ok: true, agentId, event });
+      }
+      if (req.method === 'POST' && url.pathname.startsWith('/api/operator/')) {
+        assertMutationAllowed(req, token);
+        const requestId = decodeURIComponent(url.pathname.slice('/api/operator/'.length));
+        const raw = await body(req) as { response?: unknown; action?: unknown };
+        const response = typeof raw.response === 'string' ? raw.response : '';
+        const action = typeof raw.action === 'string' && raw.action ? raw.action : 'respond';
+        const event = await respondOperator(root, eventsFile, requestId, response, action);
+        return send(req, res, 202, { ok: true, requestId, event });
       }
       return sendError(req, res, 404, 'not found');
     } catch (err) {

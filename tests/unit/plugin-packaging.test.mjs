@@ -31,7 +31,7 @@ test('Claude Code marketplace and plugin manifests resolve commands, skill, and 
 });
 
 test('plugin command markdown maps slash commands to the thin CLI wrapper without injection-live language', async () => {
-  for (const name of ['swarmwatch-init', 'swarmwatch-run', 'swarmwatch-attach', 'swarmwatch-kill']) {
+  for (const name of ['swarmwatch-init', 'swarmwatch-run', 'swarmwatch-attach', 'swarmwatch-operator', 'swarmwatch-kill']) {
     const text = await readFile(join(cwd, `plugins/swarmwatch/commands/${name}.md`), 'utf8');
     assert.match(text, /swarmwatch-plugin\.mjs/);
     assert.doesNotMatch(text, /injection-live introspection of arbitrary|attach to any running session/i);
@@ -49,10 +49,12 @@ test('plugin run/attach/kill wrappers invoke the existing SwarmWatch CLI subcomm
     await exec(process.execPath, [plugin, 'run', '--root', root, '--agent', 'a', '--', 'node', 'agent.js'], { cwd, env });
     await exec(process.execPath, [plugin, 'attach', '--root', root, '--adapter', 'swarmwatch', '--file', 'live.jsonl'], { cwd, env });
     await exec(process.execPath, [plugin, 'kill', 'a', '--root', root], { cwd, env });
+    await exec(process.execPath, [plugin, 'operator', 'list', '--root', root], { cwd, env });
     const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
     assert.deepEqual(calls[0], ['run', '--root', root, '--agent', 'a', '--', 'node', 'agent.js']);
     assert.deepEqual(calls[1], ['attach', '--root', root, '--adapter', 'swarmwatch', '--file', 'live.jsonl']);
     assert.deepEqual(calls[2], ['kill', 'a', '--root', root]);
+    assert.deepEqual(calls[3], ['operator', 'list', '--root', root]);
   } finally { await rm(root, { recursive:true, force:true }); }
 });
 

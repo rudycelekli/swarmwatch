@@ -60,6 +60,38 @@ test('SDK reporter streams into the real HTTP API and state endpoint', async () 
   } finally { await rm(root, { recursive:true, force:true }); }
 });
 
+test('HTTP operator request response appends an auditable response and clears pending inbox', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'swarmwatch-http-operator-'));
+  try {
+    await initWorkspace(root);
+    const paths = workspacePaths(root);
+    const s = await startServer({ root, eventsFile: paths.events });
+    try {
+      let res = await fetch(`http://127.0.0.1:${s.port}/api/events`, {
+        method:'POST',
+        headers:headers(s.token),
+        body: JSON.stringify({ type:'operator_request', agentId:'coder', message:'Need permission to edit package.json', metadata:{ requestId:'op-1', kind:'approval', priority:'high' } })
+      });
+      assert.equal(res.status, 201);
+      res = await fetch(`http://127.0.0.1:${s.port}/api/state`);
+      let state = await res.json();
+      assert.equal(state.totals.operatorRequests, 1);
+      assert.equal(state.agents.find((a) => a.id === 'coder').status, 'waiting');
+      res = await fetch(`http://127.0.0.1:${s.port}/api/operator/op-1`, {
+        method:'POST',
+        headers:headers(s.token),
+        body: JSON.stringify({ action:'approve', response:'go ahead' })
+      });
+      assert.equal(res.status, 202);
+      assert.match(await readFile(paths.events, 'utf8'), /operator_response/);
+      res = await fetch(`http://127.0.0.1:${s.port}/api/state`);
+      state = await res.json();
+      assert.equal(state.totals.operatorRequests, 0);
+      assert.equal(state.operatorRequests.find((r) => r.requestId === 'op-1').response.message, 'go ahead');
+    } finally { await s.close(); }
+  } finally { await rm(root, { recursive:true, force:true }); }
+});
+
 test('HTTP rejects invalid and cross-origin mutations without appending', async () => {
   const root = await mkdtemp(join(tmpdir(), 'swarmwatch-http-invalid-'));
   try {
@@ -80,6 +112,10 @@ test('HTTP rejects invalid and cross-origin mutations without appending', async 
       let res = await fetch(`http://127.0.0.1:${s.port}/api/events`, { method:'POST', headers:headers(s.token, { origin:'http://evil.example' }), body: JSON.stringify({ type:'agent_started', agentId:'a' }) });
       assert.equal(res.status, 403);
       res = await fetch(`http://127.0.0.1:${s.port}/api/events`, { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ type:'agent_started', agentId:'a' }) });
+      assert.equal(res.status, 403);
+      res = await fetch(`http://127.0.0.1:${s.port}/api/operator/nope`, { method:'POST', headers:headers(s.token, { origin:'http://evil.example' }), body: JSON.stringify({ action:'approve', response:'x' }) });
+      assert.equal(res.status, 403);
+      res = await fetch(`http://127.0.0.1:${s.port}/api/operator/nope`, { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ action:'approve', response:'x' }) });
       assert.equal(res.status, 403);
       assert.equal((await readFile(paths.events, 'utf8')).trim(), '');
     } finally { await s.close(); }

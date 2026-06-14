@@ -101,7 +101,7 @@ export function importOtelEvents(raw: unknown, source = 'otel', includeRaw = fal
     const kind = String(a['openinference.span.kind'] ?? a['gen_ai.operation.name'] ?? '').toUpperCase();
     const explicitType = stringAttr(a, ['swarmwatch.event.type']);
     const statusCode = typeof span.status?.code === 'string' ? Number(span.status.code) : span.status?.code;
-    const type = explicitType === 'agent_started' || explicitType === 'agent_heartbeat' || explicitType === 'agent_message' || explicitType === 'tool_call' || explicitType === 'cost' || explicitType === 'delegation' || explicitType === 'agent_done' || explicitType === 'agent_error' || explicitType === 'kill_requested'
+    const type = explicitType === 'agent_started' || explicitType === 'agent_heartbeat' || explicitType === 'agent_message' || explicitType === 'tool_call' || explicitType === 'cost' || explicitType === 'delegation' || explicitType === 'agent_done' || explicitType === 'agent_error' || explicitType === 'kill_requested' || explicitType === 'operator_request' || explicitType === 'operator_response'
       ? explicitType
       : statusCode === 2 ? 'agent_error'
       : kind === 'TOOL' ? 'tool_call'

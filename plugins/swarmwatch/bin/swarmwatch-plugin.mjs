@@ -234,15 +234,20 @@ async function cmdKill(args) {
   else if (session?.mode === 'process-live') console.error('SwarmWatch kill scope: supervised child may terminate when this kill marker matches the process-live agent.');
   process.exit(runSwarmWatch(root, ['kill', ...args]));
 }
+async function cmdOperator(args) {
+  const root = rootFrom(args);
+  process.exit(runSwarmWatch(root, ['operator', ...args]));
+}
 async function main() {
   const [cmd, ...args] = process.argv.slice(2);
   if (!cmd || cmd === 'help' || cmd === '--help') {
-    console.log('Usage: swarmwatch-plugin.mjs init|run|attach|kill [args...]');
+    console.log('Usage: swarmwatch-plugin.mjs init|run|attach|operator|kill [args...]');
     return;
   }
   if (cmd === 'init') return cmdInit(args);
   if (cmd === 'run') return cmdRun(args);
   if (cmd === 'attach') return cmdAttach(args);
+  if (cmd === 'operator') return cmdOperator(args);
   if (cmd === 'kill') return cmdKill(args);
   throw new Error(`unknown command ${cmd}`);
 }

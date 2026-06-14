@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "swarmwatch",
-      "description": "Local-first SwarmWatch controls for process-live runs, stream-live follows, and quiet structural swarm alarms.",
+      "description": "Local-first SwarmWatch controls for process-live runs, stream-live follows, Operator Inbox responses, and quiet structural swarm alarms.",
       "version": "0.1.0",
       "author": {
         "name": "rudycelekli",

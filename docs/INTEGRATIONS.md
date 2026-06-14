@@ -21,6 +21,7 @@ The plugin contributes namespaced commands:
 - `/swarmwatch:swarmwatch-init` — detects a launchable agent command or followable event source, writes `.swarmwatch/config.json`, and scaffolds `.swarmwatch/swarmwatch-start.sh`.
 - `/swarmwatch:swarmwatch-run` — process-live wrapper around `npx swarmwatch run`.
 - `/swarmwatch:swarmwatch-attach` — stream-live wrapper around `npx swarmwatch attach`.
+- `/swarmwatch:swarmwatch-operator` — list or answer pending Operator Inbox requests by appending `operator_response` events.
 - `/swarmwatch:swarmwatch-kill` — honest kill request: supervised child termination for process-live, marker-only for stream-live/external sources.
 
 The plugin monitor is intentionally quiet: it emits only new structural alerts (`runaway_cost`, `circular_delegation`, `high_fanout`) during an active SwarmWatch session and frequency-caps each distinct alert.
@@ -40,6 +41,9 @@ const swarm = createSwarmWatchReporter({
 await swarm.started('planning');
 await swarm.delegation('coder', 'build the API');
 await swarm.tool('read_repo', { tokens: 512 });
+await swarm.operatorRequest('Approve using the migration tool?', {
+  metadata: { kind: 'approval', priority: 'high', choices: ['approve', 'deny'] }
+});
 await swarm.cost(0.02, 1800);
 await swarm.done('handoff ready');
 ```
@@ -76,6 +80,48 @@ await swarm.message('starting tool loop');
 
 The reporter posts to `POST /api/events` and sends `x-swarmwatch-token`. If the API rejects the event, the reporter throws with the HTTP status and response body.
 
+## Operator requests
+
+When an agent needs the human/operator, emit `operator_request`. SwarmWatch shows it in the dashboard Operator Inbox, marks the agent as `waiting`, and exposes a token-gated response endpoint. The response is appended back into the same event log as `operator_response`, so a process-live agent or SDK-integrated runtime can continue by watching the stream.
+
+```js
+await swarm.operatorRequest('Should I delete generated artifacts before retrying?', {
+  metadata: {
+    requestId: 'cleanup-approval-1',
+    kind: 'approval',
+    priority: 'urgent',
+    choices: ['approve cleanup', 'skip cleanup']
+  }
+});
+```
+
+Equivalent JSONL:
+
+```json
+{"id":"ask-1","ts":"2026-06-13T00:00:02.000Z","type":"operator_request","agentId":"builder","message":"Should I delete generated artifacts before retrying?","metadata":{"requestId":"cleanup-approval-1","kind":"approval","priority":"urgent","choices":["approve cleanup","skip cleanup"]}}
+```
+
+Dashboard responses call:
+
+```http
+POST /api/operator/cleanup-approval-1
+x-swarmwatch-token: <printed token>
+
+{"action":"approve","response":"approve cleanup"}
+```
+
+The same control loop is exposed through CLI and MCP:
+
+```bash
+npx swarmwatch operator list --json
+npx swarmwatch operator respond cleanup-approval-1 --action approve --response "approve cleanup"
+```
+
+MCP tools:
+
+- `swarm_operator_list`
+- `swarm_operator_respond`
+
 ## Option 3: direct JSONL
 
 Any language can emit one newline-delimited event per line:
@@ -111,6 +157,8 @@ SwarmWatch maps trace/span parentage, `openinference.span.kind`, tool names, cos
 | Agent calls a tool | `swarm.tool(name, extras)` | `tool_call` |
 | Agent delegates to another agent | `swarm.delegation(target, message)` | `delegation` |
 | Model/provider usage arrives | `swarm.cost(costUsd, tokens)` | `cost` |
+| Agent needs user input/approval | `swarm.operatorRequest(message, extras)` | `operator_request` |
+| User/operator answers | dashboard, `POST /api/operator/:requestId`, `swarmwatch operator respond`, or `swarm_operator_respond` | `operator_response` |
 | Agent heartbeat | `swarm.heartbeat()` | `agent_heartbeat` |
 | Agent finishes | `swarm.done()` | `agent_done` |
 | Agent errors | `swarm.error(message)` | `agent_error` |

@@ -7,7 +7,7 @@ import { makeEvent, parseJsonl } from '../core/event.js';
 import { appendEvent, initWorkspace, workspacePaths } from '../core/store.js';
 import { startServer } from '../server/server.js';
 import { runMcp } from '../mcp/server.js';
-import { loadObservedEvents, loadObservedState, loadRuntimeConfig, requestKill, verifyObserved } from '../core/runtime.js';
+import { loadObservedEvents, loadObservedState, loadRuntimeConfig, requestKill, respondOperator, verifyObserved } from '../core/runtime.js';
 import { followFile } from '../live/follow.js';
 import { runSupervised } from '../live/run.js';
 import { importEvents, type ImportAdapter } from '../adapters/importers.js';
@@ -29,6 +29,8 @@ Usage:
   swarmwatch demo [--json]
   swarmwatch replay <events.jsonl> [--json]
   swarmwatch verify [--events FILE] [--json]
+  swarmwatch operator list [--events FILE] [--json]
+  swarmwatch operator respond <requestId> [--response TEXT] [--action approve|deny|respond]
   swarmwatch doctor [--root DIR]
   swarmwatch kill <agentId> [--root DIR]
   swarmwatch mcp [--root DIR]
@@ -44,6 +46,8 @@ Examples:
   npx swarmwatch export --format otel
   npx swarmwatch import --adapter claude-transcript --file transcript.jsonl
   npx swarmwatch verify
+  npx swarmwatch operator list --json
+  npx swarmwatch operator respond req-1 --action approve --response "go ahead"
   npx swarmwatch watch --port 8787
 `);
 }
@@ -206,6 +210,29 @@ async function main() {
     console.log(JSON.stringify({ ok: true, event: ev }, null, 2));
     return;
   }
+  if (cmd === 'operator') {
+    const sub = positional(0) ?? 'list';
+    const paths = await initWorkspace(root);
+    const eventsFile = resolve(arg('--events', paths.events)!);
+    if (sub === 'list' || sub === 'ls') {
+      const state = await loadObservedState(root, eventsFile);
+      const requests = state.operatorRequests.filter((r) => r.status === 'pending');
+      if (flag('--json')) console.log(JSON.stringify({ ok: true, pending: requests.length, requests }, null, 2));
+      else if (!requests.length) console.log('No pending operator requests.');
+      else for (const r of requests) console.log(`${r.requestId}\t${r.agentId}\t${r.priority ?? 'normal'}\t${r.message}`);
+      return;
+    }
+    if (sub === 'respond' || sub === 'answer' || sub === 'approve' || sub === 'deny') {
+      const requestId = positional(1);
+      if (!requestId) throw new Error('operator respond requires a requestId');
+      const action = arg('--action') ?? (sub === 'approve' ? 'approve' : sub === 'deny' ? 'deny' : 'respond');
+      const response = arg('--response') ?? arg('--message') ?? (action === 'approve' ? 'approved' : action === 'deny' ? 'denied' : '');
+      const event = await respondOperator(root, eventsFile, requestId, response, action);
+      console.log(JSON.stringify({ ok: true, requestId, event }, null, 2));
+      return;
+    }
+    throw new Error(`unknown operator command ${sub}`);
+  }
   if (cmd === 'mcp') return runMcp(root);
   if (cmd === 'serve' || cmd === 'watch') {
     const paths = await initWorkspace(root);
@@ -220,7 +247,7 @@ async function main() {
     const s = await startServer({ root, eventsFile, port });
     console.log(`SwarmWatch dashboard: http://127.0.0.1:${s.port}`);
     console.log(`Mutation token: ${s.token}`);
-    console.log(`API: GET /api/state · POST /api/events · POST /api/kill/:agentId (mutations require x-swarmwatch-token)`);
+    console.log(`API: GET /api/state · POST /api/events · POST /api/operator/:requestId · POST /api/kill/:agentId (mutations require x-swarmwatch-token)`);
     process.on('SIGINT', async () => { await s.close(); process.exit(0); });
     return;
   }

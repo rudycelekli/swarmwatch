@@ -12,3 +12,4 @@
 - Verification layer with digest and structured issues.
 - SDK reporter (`createSwarmWatchReporter`) plus Node example and integration guide for file/HTTP event emission without reimplementing the event contract.
 - Claude Code plugin marketplace/package with namespaced commands, onboarding detection, and quiet `swarmwatch-alarm` structural monitor.
+- Operator Inbox for `operator_request` / `operator_response` control loops, including token-gated dashboard approval/deny responses plus CLI, MCP, HTTP, and library control surfaces.

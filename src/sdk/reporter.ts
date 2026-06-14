@@ -105,6 +105,11 @@ export class SwarmWatchReporter {
     return this.event({ ...extras, type: 'agent_error', status: 'error', message });
   }
 
+  operatorRequest(message: string, extras: ReporterEventExtras = {}): Promise<SwarmEvent> {
+    const metadata = { ...(extras.metadata ?? {}), requestId: extras.metadata?.requestId ?? this.opts.id?.() };
+    return this.event({ ...extras, type: 'operator_request', message, metadata });
+  }
+
   private async emit(event: SwarmEvent): Promise<void> {
     const writes: Promise<void>[] = [];
     if (this.opts.file || !this.opts.url) writes.push(appendEvent(this.opts.file ?? workspacePaths(this.opts.root).events, event));

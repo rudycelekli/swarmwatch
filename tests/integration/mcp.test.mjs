@@ -76,6 +76,7 @@ test('MCP tools list, ingest, state, verify, and kill work over stdio with confi
     const tools = await readLine(proc);
     assert.ok(tools.result.tools.some((t) => t.name === 'swarm_state'));
     assert.ok(tools.result.tools.some((t) => t.name === 'swarm_verify'));
+    assert.ok(tools.result.tools.some((t) => t.name === 'swarm_operator_respond'));
     assert.match((await call(proc, 3, 'swarm_ingest', { type:'agent_started', agentId:'planner' })).result.content[0].text, /planner/);
     await call(proc, 4, 'swarm_ingest', { type:'cost', agentId:'planner', costUsd:0.6 });
     const state = JSON.parse((await call(proc, 5, 'swarm_state')).result.content[0].text);
@@ -85,6 +86,13 @@ test('MCP tools list, ingest, state, verify, and kill work over stdio with confi
     assert.ok(verify.state.alerts.some((a) => a.kind === 'runaway_cost'));
     await call(proc, 7, 'swarm_kill', { agentId:'planner' });
     assert.match(await readFile(join(root, '.swarmwatch', 'kills.jsonl'), 'utf8'), /planner/);
+    await call(proc, 8, 'swarm_ingest', { type:'operator_request', agentId:'coder', message:'Need approval', metadata:{ requestId:'op-mcp-1', kind:'approval' } });
+    const pending = JSON.parse((await call(proc, 9, 'swarm_operator_list')).result.content[0].text);
+    assert.equal(pending.pending.length, 1);
+    const response = JSON.parse((await call(proc, 10, 'swarm_operator_respond', { requestId:'op-mcp-1', action:'approve', response:'approved' })).result.content[0].text);
+    assert.equal(response.event.type, 'operator_response');
+    const afterOperator = JSON.parse((await call(proc, 11, 'swarm_state')).result.content[0].text);
+    assert.equal(afterOperator.totals.operatorRequests, 0);
   } finally {
     proc.kill('SIGTERM');
     await rm(root, { recursive:true, force:true });

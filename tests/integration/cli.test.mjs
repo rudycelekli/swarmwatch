@@ -42,6 +42,29 @@ test('CLI import, verify, and doctor exercise public commands with config', asyn
   }
 });
 
+test('CLI operator list and respond provide an auditable user-control loop', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'swarmwatch-cli-operator-'));
+  try {
+    await exec(process.execPath, ['dist/cli/index.js', 'init', '--root', root], { cwd });
+    let out = await exec(process.execPath, ['dist/cli/index.js', 'ingest', '--root', root, '--type', 'operator_request', '--agent', 'coder', '--message', 'Need approval to edit package.json'], { cwd });
+    const request = JSON.parse(out.stdout);
+    out = await exec(process.execPath, ['dist/cli/index.js', 'operator', 'list', '--root', root, '--json'], { cwd });
+    let listed = JSON.parse(out.stdout);
+    assert.equal(listed.pending, 1);
+    assert.equal(listed.requests[0].requestId, request.id);
+    out = await exec(process.execPath, ['dist/cli/index.js', 'operator', 'respond', request.id, '--root', root, '--action', 'approve', '--response', 'go ahead'], { cwd });
+    assert.equal(JSON.parse(out.stdout).event.type, 'operator_response');
+    out = await exec(process.execPath, ['dist/cli/index.js', 'operator', 'list', '--root', root, '--json'], { cwd });
+    listed = JSON.parse(out.stdout);
+    assert.equal(listed.pending, 0);
+    const log = await readFile(join(root, '.swarmwatch', 'events.jsonl'), 'utf8');
+    assert.match(log, /operator_request/);
+    assert.match(log, /operator_response/);
+  } finally {
+    await rm(root, { recursive:true, force:true });
+  }
+});
+
 test('CLI invalid numeric ingest exits 2 and leaves event log empty', async () => {
   const root = await mkdtemp(join(tmpdir(), 'swarmwatch-cli-invalid-'));
   try {

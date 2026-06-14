@@ -28,3 +28,25 @@ test('replay mode suppresses clock-relative stuck/dead alerts while live mode en
   const live = analyzeEvents([event], 'test', { now, stuckMs:1000, deadMs:5000, mode:'live' });
   assert.ok(live.alerts.some((a) => a.kind === 'dead_agent'));
 });
+
+test('operator requests create a pending inbox item and waiting agent until responded', () => {
+  const request = {
+    id:'ask-1',
+    ts:'2026-06-13T00:00:00.000Z',
+    type:'operator_request',
+    agentId:'coder',
+    message:'Approve editing package.json?',
+    metadata:{ requestId:'req-1', kind:'approval', priority:'high', choices:['approve','deny'] }
+  };
+  const pending = analyzeEvents([request], 'test', { now });
+  assert.equal(pending.totals.operatorRequests, 1);
+  assert.equal(pending.agents.find((a) => a.id === 'coder').status, 'waiting');
+  assert.deepEqual(pending.operatorRequests[0].choices, ['approve','deny']);
+  const resolved = analyzeEvents([
+    request,
+    { id:'answer-1', ts:'2026-06-13T00:00:01.000Z', type:'operator_response', agentId:'coder', message:'approved', metadata:{ requestId:'req-1', action:'approve' } }
+  ], 'test', { now });
+  assert.equal(resolved.totals.operatorRequests, 0);
+  assert.equal(resolved.operatorRequests[0].status, 'responded');
+  assert.equal(resolved.operatorRequests[0].response.action, 'approve');
+});
