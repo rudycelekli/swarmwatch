@@ -22,6 +22,8 @@ flowchart LR
   F --> I
 ```
 
+The [engineering case study](https://rudycelekli.github.io/engineering/repositories/rudycelekli/swarmwatch.html) describes the process and event-stream observation boundaries.
+
 ## Quickstart
 
 ```bash
